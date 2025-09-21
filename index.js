@@ -7,6 +7,8 @@ const GitHubAPI = require('./src/github');
 const BotCommands = require('./src/botCommands');
 const WebhookHandler = require('./src/webhookHandler');
 const Logger = require('./src/logger');
+const AdminManager = require('./src/admin');
+const AdminCommands = require('./src/adminCommands');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -21,12 +23,17 @@ const logger = new Logger({
 const githubAPI = new GitHubAPI(process.env.GITHUB_TOKEN);
 const botCommands = new BotCommands(githubAPI);
 const webhookHandler = new WebhookHandler(githubAPI, botCommands);
+const adminManager = new AdminManager();
+const adminCommands = new AdminCommands(adminManager);
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(logger.middleware());
+
+// Статические файлы
+app.use(express.static('public'));
 
 // Routes
 app.get('/', (req, res) => {
@@ -157,6 +164,198 @@ app.get('/api/webhook/events', (req, res) => {
   });
 });
 
+// ==================== АДМИН API ====================
+
+// Middleware для проверки админ сессии
+const requireAdminAuth = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, message: 'Требуется авторизация' });
+  }
+
+  const sessionId = authHeader.substring(7);
+  const session = adminManager.validateSession(sessionId);
+  
+  if (!session.valid) {
+    return res.status(401).json({ success: false, message: session.message });
+  }
+
+  req.adminSession = session.session;
+  next();
+};
+
+// Админ аутентификация
+app.post('/api/admin/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    
+    if (!username || !password) {
+      return res.status(400).json({ success: false, message: 'Необходимы username и password' });
+    }
+
+    const result = await adminManager.authenticate(username, password);
+    logger.info('Admin login attempt', { username, success: result.success });
+    
+    res.json(result);
+  } catch (error) {
+    logger.error('Admin login error', { error: error.message });
+    res.status(500).json({ success: false, message: 'Ошибка сервера' });
+  }
+});
+
+// Выход из админ системы
+app.post('/api/admin/logout', requireAdminAuth, async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const sessionId = authHeader.substring(7);
+    
+    const result = adminManager.logout(sessionId);
+    logger.info('Admin logout', { admin_id: req.adminSession.admin_id });
+    
+    res.json(result);
+  } catch (error) {
+    logger.error('Admin logout error', { error: error.message });
+    res.status(500).json({ success: false, message: 'Ошибка сервера' });
+  }
+});
+
+// Статистика системы
+app.get('/api/admin/stats', requireAdminAuth, async (req, res) => {
+  try {
+    const stats = await adminManager.getSystemStats();
+    res.json({ success: true, data: stats });
+  } catch (error) {
+    logger.error('Admin stats error', { error: error.message });
+    res.status(500).json({ success: false, message: 'Ошибка получения статистики' });
+  }
+});
+
+// Получение пользователей
+app.get('/api/admin/users', requireAdminAuth, async (req, res) => {
+  try {
+    const users = adminManager.getAllUsers();
+    res.json({ success: true, data: { users, total: users.length } });
+  } catch (error) {
+    logger.error('Admin users error', { error: error.message });
+    res.status(500).json({ success: false, message: 'Ошибка получения пользователей' });
+  }
+});
+
+// Получение администраторов
+app.get('/api/admin/admins', requireAdminAuth, async (req, res) => {
+  try {
+    const admins = adminManager.getAllAdmins();
+    res.json({ success: true, data: { admins, total: admins.length } });
+  } catch (error) {
+    logger.error('Admin admins error', { error: error.message });
+    res.status(500).json({ success: false, message: 'Ошибка получения администраторов' });
+  }
+});
+
+// Получение логов аудита
+app.get('/api/admin/logs', requireAdminAuth, async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 100;
+    const logs = await adminManager.getAuditLogs(limit);
+    res.json({ success: true, data: { logs, total: logs.length } });
+  } catch (error) {
+    logger.error('Admin logs error', { error: error.message });
+    res.status(500).json({ success: false, message: 'Ошибка получения логов' });
+  }
+});
+
+// Получение активных сессий
+app.get('/api/admin/sessions', requireAdminAuth, async (req, res) => {
+  try {
+    const sessions = Array.from(adminManager.sessions.values());
+    res.json({ success: true, data: { sessions, total: sessions.length } });
+  } catch (error) {
+    logger.error('Admin sessions error', { error: error.message });
+    res.status(500).json({ success: false, message: 'Ошибка получения сессий' });
+  }
+});
+
+// Выполнение админ команд
+app.post('/api/admin/command', requireAdminAuth, async (req, res) => {
+  try {
+    const { command, args } = req.body;
+    
+    if (!command) {
+      return res.status(400).json({ success: false, message: 'Команда обязательна' });
+    }
+
+    const context = { session: req.headers.authorization.substring(7) };
+    const result = await adminCommands.processCommand(command, args, context);
+    
+    logger.command(`admin.${command}`, args, result);
+    res.json(result);
+  } catch (error) {
+    logger.error('Admin command error', { error: error.message, command: req.body.command });
+    res.status(500).json({ success: false, message: 'Ошибка выполнения команды' });
+  }
+});
+
+// Создание пользователя
+app.post('/api/admin/user', requireAdminAuth, async (req, res) => {
+  try {
+    const { username, email, role } = req.body;
+    
+    if (!username || !email) {
+      return res.status(400).json({ success: false, message: 'Необходимы username и email' });
+    }
+
+    const result = await adminManager.createUser({ username, email, role });
+    res.json(result);
+  } catch (error) {
+    logger.error('Admin create user error', { error: error.message });
+    res.status(500).json({ success: false, message: 'Ошибка создания пользователя' });
+  }
+});
+
+// Обновление пользователя
+app.put('/api/admin/user/:userId', requireAdminAuth, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const updateData = req.body;
+    
+    const result = await adminManager.updateUser(userId, updateData);
+    res.json(result);
+  } catch (error) {
+    logger.error('Admin update user error', { error: error.message });
+    res.status(500).json({ success: false, message: 'Ошибка обновления пользователя' });
+  }
+});
+
+// Удаление пользователя
+app.delete('/api/admin/user/:userId', requireAdminAuth, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    const result = await adminManager.deleteUser(userId);
+    res.json(result);
+  } catch (error) {
+    logger.error('Admin delete user error', { error: error.message });
+    res.status(500).json({ success: false, message: 'Ошибка удаления пользователя' });
+  }
+});
+
+// Создание администратора
+app.post('/api/admin/admin', requireAdminAuth, async (req, res) => {
+  try {
+    const { username, email, password, role } = req.body;
+    
+    if (!username || !email || !password) {
+      return res.status(400).json({ success: false, message: 'Необходимы username, email и password' });
+    }
+
+    const result = await adminManager.createAdmin({ username, email, password, role }, req.adminSession.role);
+    res.json(result);
+  } catch (error) {
+    logger.error('Admin create admin error', { error: error.message });
+    res.status(500).json({ success: false, message: 'Ошибка создания администратора' });
+  }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   logger.error('Unhandled error', { 
@@ -185,6 +384,11 @@ app.listen(PORT, () => {
   console.log(`🤖 Bot commands: http://localhost:${PORT}/api/commands`);
   console.log(`👤 User API: http://localhost:${PORT}/api/user/:username`);
   console.log(`📚 Repo API: http://localhost:${PORT}/api/repo/:owner/:repo`);
+  console.log(`🔐 Admin panel: http://localhost:${PORT}/admin.html`);
+  console.log(`👨‍💼 Admin API: http://localhost:${PORT}/api/admin/*`);
+  console.log(`\n🔑 Default admin credentials:`);
+  console.log(`   Username: admin`);
+  console.log(`   Password: admin123`);
 });
 
 module.exports = app;

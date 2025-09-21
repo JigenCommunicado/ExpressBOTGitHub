@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ-панель ExpressBOT</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .header h1 {
+            color: #4a5568;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #718096;
+        }
+
+        .login-form {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            max-width: 400px;
+            margin: 50px auto;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #4a5568;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: transform 0.2s;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .dashboard {
+            display: none;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .card h3 {
+            color: #4a5568;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+            border-radius: 10px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #718096;
+            margin-top: 5px;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .table th,
+        .table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .table th {
+            background: #f7fafc;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .status-active {
+            color: #38a169;
+            font-weight: 500;
+        }
+
+        .status-inactive {
+            color: #e53e3e;
+            font-weight: 500;
+        }
+
+        .logout-btn {
+            background: #e53e3e;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            float: right;
+        }
+
+        .error {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
+        .success {
+            background: #c6f6d5;
+            color: #2f855a;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #718096;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Админ-панель ExpressBOT</h1>
+            <p>Управление смарт-приложением и пользователями</p>
+        </div>
+
+        <!-- Форма входа -->
+        <div id="loginForm" class="login-form">
+            <h2 style="text-align: center; margin-bottom: 20px; color: #4a5568;">Вход в систему</h2>
+            <form id="loginFormElement">
+                <div class="form-group">
+                    <label for="username">Имя пользователя:</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Пароль:</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                <button type="submit" class="btn">Войти</button>
+            </form>
+            <div id="loginError" class="error" style="display: none;"></div>
+        </div>
+
+        <!-- Панель управления -->
+        <div id="dashboard" class="dashboard">
+            <div class="card">
+                <h3>📊 Статистика системы</h3>
+                <div id="systemStats" class="loading">Загрузка...</div>
+            </div>
+
+            <div class="card">
+                <h3>👥 Пользователи</h3>
+                <button onclick="loadUsers()" class="btn" style="margin-bottom: 15px;">Обновить</button>
+                <div id="usersList" class="loading">Загрузка...</div>
+            </div>
+
+            <div class="card">
+                <h3>👨‍💼 Администраторы</h3>
+                <button onclick="loadAdmins()" class="btn" style="margin-bottom: 15px;">Обновить</button>
+                <div id="adminsList" class="loading">Загрузка...</div>
+            </div>
+
+            <div class="card">
+                <h3>📝 Логи аудита</h3>
+                <button onclick="loadAuditLogs()" class="btn" style="margin-bottom: 15px;">Обновить</button>
+                <div id="auditLogs" class="loading">Загрузка...</div>
+            </div>
+
+            <div class="card">
+                <h3>🔧 Управление</h3>
+                <button onclick="logout()" class="logout-btn">Выйти</button>
+                <div style="clear: both;"></div>
+                <div style="margin-top: 20px;">
+                    <button onclick="loadSystemStats()" class="btn" style="width: 100%; margin-bottom: 10px;">Обновить статистику</button>
+                    <button onclick="loadActiveSessions()" class="btn" style="width: 100%;">Активные сессии</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let sessionId = null;
+
+        // Обработка формы входа
+        document.getElementById('loginFormElement').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    sessionId = result.session_id;
+                    document.getElementById('loginForm').style.display = 'none';
+                    document.getElementById('dashboard').style.display = 'grid';
+                    loadDashboard();
+                } else {
+                    showError('loginError', result.message);
+                }
+            } catch (error) {
+                showError('loginError', 'Ошибка подключения к серверу');
+            }
+        });
+
+        // Загрузка панели управления
+        async function loadDashboard() {
+            loadSystemStats();
+            loadUsers();
+            loadAdmins();
+            loadAuditLogs();
+        }
+
+        // Загрузка статистики системы
+        async function loadSystemStats() {
+            try {
+                const response = await fetch('/api/admin/stats', {
+                    headers: {
+                        'Authorization': `Bearer ${sessionId}`
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    const stats = result.data;
+                    document.getElementById('systemStats').innerHTML = `
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <div class="stat-value">${stats.admins}</div>
+                                <div class="stat-label">Админов</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">${stats.users}</div>
+                                <div class="stat-label">Пользователей</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">${stats.active_sessions}</div>
+                                <div class="stat-label">Сессий</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">${stats.uptime}</div>
+                                <div class="stat-label">Время работы</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 15px; font-size: 14px; color: #718096;">
+                            <strong>Память:</strong> ${stats.memory.rss} (RSS), ${stats.memory.heap} (Heap)
+                        </div>
+                    `;
+                } else {
+                    document.getElementById('systemStats').innerHTML = '<div class="error">Ошибка загрузки статистики</div>';
+                }
+            } catch (error) {
+                document.getElementById('systemStats').innerHTML = '<div class="error">Ошибка подключения</div>';
+            }
+        }
+
+        // Загрузка пользователей
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/admin/users', {
+                    headers: {
+                        'Authorization': `Bearer ${sessionId}`
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    const users = result.data.users;
+                    let html = '<table class="table"><thead><tr><th>ID</th><th>Имя</th><th>Email</th><th>Роль</th><th>Статус</th></tr></thead><tbody>';
+                    
+                    users.forEach(user => {
+                        html += `
+                            <tr>
+                                <td>${user.id.substring(0, 8)}...</td>
+                                <td>${user.username}</td>
+                                <td>${user.email}</td>
+                                <td>${user.role}</td>
+                                <td class="${user.is_active ? 'status-active' : 'status-inactive'}">
+                                    ${user.is_active ? 'Активен' : 'Неактивен'}
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += '</tbody></table>';
+                    document.getElementById('usersList').innerHTML = html;
+                } else {
+                    document.getElementById('usersList').innerHTML = '<div class="error">Ошибка загрузки пользователей</div>';
+                }
+            } catch (error) {
+                document.getElementById('usersList').innerHTML = '<div class="error">Ошибка подключения</div>';
+            }
+        }
+
+        // Загрузка администраторов
+        async function loadAdmins() {
+            try {
+                const response = await fetch('/api/admin/admins', {
+                    headers: {
+                        'Authorization': `Bearer ${sessionId}`
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    const admins = result.data.admins;
+                    let html = '<table class="table"><thead><tr><th>Имя</th><th>Email</th><th>Роль</th><th>Последний вход</th><th>Статус</th></tr></thead><tbody>';
+                    
+                    admins.forEach(admin => {
+                        html += `
+                            <tr>
+                                <td>${admin.username}</td>
+                                <td>${admin.email}</td>
+                                <td>${admin.role}</td>
+                                <td>${admin.last_login ? new Date(admin.last_login).toLocaleString() : 'Никогда'}</td>
+                                <td class="${admin.is_active ? 'status-active' : 'status-inactive'}">
+                                    ${admin.is_active ? 'Активен' : 'Неактивен'}
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += '</tbody></table>';
+                    document.getElementById('adminsList').innerHTML = html;
+                } else {
+                    document.getElementById('adminsList').innerHTML = '<div class="error">Ошибка загрузки администраторов</div>';
+                }
+            } catch (error) {
+                document.getElementById('adminsList').innerHTML = '<div class="error">Ошибка подключения</div>';
+            }
+        }
+
+        // Загрузка логов аудита
+        async function loadAuditLogs() {
+            try {
+                const response = await fetch('/api/admin/logs?limit=20', {
+                    headers: {
+                        'Authorization': `Bearer ${sessionId}`
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    const logs = result.data.logs;
+                    let html = '<table class="table"><thead><tr><th>Время</th><th>Действие</th><th>Админ</th><th>Детали</th></tr></thead><tbody>';
+                    
+                    logs.forEach(log => {
+                        html += `
+                            <tr>
+                                <td>${new Date(log.timestamp).toLocaleString()}</td>
+                                <td>${log.action}</td>
+                                <td>${log.admin_id}</td>
+                                <td>${JSON.stringify(log.details)}</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += '</tbody></table>';
+                    document.getElementById('auditLogs').innerHTML = html;
+                } else {
+                    document.getElementById('auditLogs').innerHTML = '<div class="error">Ошибка загрузки логов</div>';
+                }
+            } catch (error) {
+                document.getElementById('auditLogs').innerHTML = '<div class="error">Ошибка подключения</div>';
+            }
+        }
+
+        // Загрузка активных сессий
+        async function loadActiveSessions() {
+            try {
+                const response = await fetch('/api/admin/sessions', {
+                    headers: {
+                        'Authorization': `Bearer ${sessionId}`
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    const sessions = result.data.sessions;
+                    let html = '<table class="table"><thead><tr><th>Админ</th><th>Роль</th><th>Создана</th><th>Истекает</th></tr></thead><tbody>';
+                    
+                    sessions.forEach(session => {
+                        html += `
+                            <tr>
+                                <td>${session.username}</td>
+                                <td>${session.role}</td>
+                                <td>${new Date(session.created_at).toLocaleString()}</td>
+                                <td>${new Date(session.expires_at).toLocaleString()}</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += '</tbody></table>';
+                    alert('Активные сессии:\n\n' + sessions.map(s => 
+                        `${s.username} (${s.role}) - ${new Date(s.created_at).toLocaleString()}`
+                    ).join('\n'));
+                } else {
+                    alert('Ошибка загрузки сессий');
+                }
+            } catch (error) {
+                alert('Ошибка подключения');
+            }
+        }
+
+        // Выход из системы
+        async function logout() {
+            if (sessionId) {
+                try {
+                    await fetch('/api/admin/logout', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${sessionId}`
+                        }
+                    });
+                } catch (error) {
+                    console.error('Logout error:', error);
+                }
+            }
+            
+            sessionId = null;
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('loginFormElement').reset();
+        }
+
+        // Показать ошибку
+        function showError(elementId, message) {
+            const errorElement = document.getElementById(elementId);
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+            setTimeout(() => {
+                errorElement.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
