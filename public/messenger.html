@@ -1,0 +1,1307 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Express Messenger Bot - Тестирование</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 800px;
+            height: 80vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.bot {
+            display: flex;
+            justify-content: flex-start;
+        }
+
+        .message.user {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 15px 20px;
+            border-radius: 20px;
+            word-wrap: break-word;
+        }
+
+        .message.bot .message-content {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 20px 20px 20px 5px;
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 20px 20px 5px 20px;
+        }
+
+        .message-logo {
+            font-weight: bold;
+            font-size: 16px;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .message-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .message-text {
+            line-height: 1.5;
+            margin-bottom: 10px;
+        }
+
+        .buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .button:hover {
+            background: #5a6fd8;
+            transform: translateY(-2px);
+        }
+
+        .input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-field {
+            flex: 1;
+            padding: 12px 20px;
+            border: 2px solid #e9ecef;
+            border-radius: 25px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .input-field:focus {
+            border-color: #667eea;
+        }
+
+        .send-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .send-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .user-id-input {
+            padding: 10px 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-id-input label {
+            font-weight: bold;
+            color: #666;
+        }
+
+        .user-id-input input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 15px;
+            outline: none;
+        }
+
+        .status {
+            padding: 10px 20px;
+            background: #e8f5e8;
+            color: #2d5a2d;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .error {
+            background: #ffeaea;
+            color: #d32f2f;
+        }
+
+        .form-field {
+            margin-bottom: 15px;
+        }
+
+        .form-field label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .form-field input,
+        .form-field textarea,
+        .form-field select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .form-field textarea {
+            height: 80px;
+            resize: vertical;
+        }
+
+        .location-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .location-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 10px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .location-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .location-selected {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+
+        .department-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .department-button {
+            background: #2c3e50;
+            color: white;
+            border: none;
+            padding: 15px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .department-button:hover {
+            background: #34495e;
+            transform: translateY(-1px);
+        }
+
+        .calendar-container {
+            margin-top: 15px;
+            background: #2c3e50;
+            border-radius: 10px;
+            padding: 15px;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .calendar-nav {
+            background: #34495e;
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .calendar-nav:hover {
+            background: #4a5f7a;
+        }
+
+        .calendar-month {
+            background: #34495e;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .calendar-days-header {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+
+        .calendar-day-header {
+            background: #34495e;
+            color: white;
+            border: none;
+            padding: 8px 4px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .calendar-days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+        }
+
+        .calendar-day {
+            background: #34495e;
+            color: white;
+            border: none;
+            padding: 10px 4px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .calendar-day:hover {
+            background: #4a5f7a;
+            transform: translateY(-1px);
+        }
+
+        .calendar-day.empty {
+            background: transparent;
+            cursor: default;
+        }
+
+        .calendar-day.empty:hover {
+            background: transparent;
+            transform: none;
+        }
+
+        .calendar-day.special {
+            background: #3498db;
+        }
+
+        .calendar-day.special:hover {
+            background: #2980b9;
+        }
+
+        .calendar-day.special::after {
+            content: '✈️';
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            font-size: 10px;
+        }
+
+        .position-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .position-button {
+            background: #2c3e50;
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            text-align: left;
+        }
+
+        .position-button:hover {
+            background: #34495e;
+            transform: translateY(-1px);
+        }
+
+        .format-block {
+            background: #2c3e50;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            position: relative;
+        }
+
+        .format-block .copy-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #34495e;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .format-block .copy-button:hover {
+            background: #4a5f7a;
+        }
+
+        .format-fields {
+            font-family: 'Courier New', monospace;
+            color: #ecf0f1;
+            line-height: 1.6;
+        }
+
+        .format-example {
+            background: #2c3e50;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            position: relative;
+        }
+
+        .format-example .copy-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #34495e;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .format-example .copy-button:hover {
+            background: #4a5f7a;
+        }
+
+        .format-example .example-text {
+            font-family: 'Courier New', monospace;
+            color: #ecf0f1;
+            line-height: 1.6;
+        }
+
+        .summary-container {
+            background: #2c3e50;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 2px solid #34495e;
+        }
+
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #34495e;
+        }
+
+        .summary-item:last-child {
+            border-bottom: none;
+        }
+
+        .summary-label {
+            font-weight: bold;
+            color: #ecf0f1;
+            font-size: 14px;
+        }
+
+        .summary-value {
+            color: #bdc3c7;
+            font-size: 14px;
+            text-align: right;
+            max-width: 60%;
+        }
+
+        .summary-timestamp {
+            text-align: right;
+            color: #7f8c8d;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        .confirm-button {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .confirm-button:hover {
+            background: #2ecc71;
+            transform: translateY(-1px);
+        }
+
+        .edit-button {
+            background: #34495e;
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .edit-button:hover {
+            background: #4a5f7a;
+            transform: translateY(-1px);
+        }
+
+        .start-link-button {
+            background: transparent;
+            color: #3498db;
+            border: 2px solid #3498db;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            width: auto;
+            display: inline-block;
+            text-decoration: none;
+        }
+
+        .start-link-button:hover {
+            background: #3498db;
+            color: white;
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✈️ CREW SERVICES</h1>
+            <p>Бот для заказа рейсов - Тестирование</p>
+        </div>
+
+        <div class="user-id-input">
+            <label for="userId">ID пользователя:</label>
+            <input type="text" id="userId" value="user123" placeholder="Введите ID пользователя">
+            <button class="button" onclick="startNewSession()">Новая сессия</button>
+        </div>
+
+        <div class="status" id="status">Готов к работе</div>
+
+        <div class="chat-container">
+            <div class="messages" id="messages">
+                <!-- Приветственное сообщение будет загружено автоматически -->
+            </div>
+
+            <div class="input-container">
+                <input type="text" id="messageInput" class="input-field" placeholder="Введите сообщение или команду..." onkeypress="handleKeyPress(event)">
+                <button class="send-button" onclick="sendMessage()">Отправить</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUserId = 'user123';
+
+        function startNewSession() {
+            const userId = document.getElementById('userId').value;
+            if (userId.trim()) {
+                currentUserId = userId.trim();
+                clearMessages();
+                showStatus('Новая сессия начата', 'success');
+                sendMessage('/start');
+            }
+        }
+
+        function clearMessages() {
+            document.getElementById('messages').innerHTML = '';
+        }
+
+        function showStatus(message, type = 'success') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+            setTimeout(() => {
+                status.textContent = 'Готов к работе';
+                status.className = 'status';
+            }, 3000);
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        async function sendMessage(message = null) {
+            const messageInput = document.getElementById('messageInput');
+            const messageText = message || messageInput.value.trim();
+            
+            if (!messageText) return;
+
+            messageInput.value = '';
+
+            addMessage(messageText, 'user');
+            showStatus('Отправка сообщения...', 'info');
+
+            console.log('Sending message:', messageText, 'to user:', currentUserId);
+
+            try {
+                const response = await fetch('/api/messenger/message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        userId: currentUserId,
+                        message: messageText,
+                        messageType: 'text'
+                    })
+                });
+
+                const data = await response.json();
+                console.log('Response received:', data);
+
+                if (data.success) {
+                    showStatus('Сообщение получено', 'success');
+                    displayBotResponse(data.data);
+                } else {
+                    showStatus('Ошибка: ' + data.message, 'error');
+                    console.error('API Error:', data);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showStatus('Ошибка соединения', 'error');
+            }
+        }
+
+        function addMessage(text, sender) {
+            const messagesContainer = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            
+            if (sender === 'user') {
+                contentDiv.textContent = text;
+            } else {
+                contentDiv.innerHTML = formatBotMessage(text);
+            }
+            
+            messageDiv.appendChild(contentDiv);
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function displayBotResponse(response) {
+            console.log('Displaying bot response:', response);
+            
+            const messagesContainer = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message bot';
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            
+            if (response.type === 'welcome') {
+                console.log('Formatting welcome message with data:', response.data);
+                const welcomeData = response.data.data || response.data;
+                contentDiv.innerHTML = formatWelcomeMessage(welcomeData);
+            } else if (response.type === 'help') {
+                contentDiv.innerHTML = formatHelpMessage(response.data);
+            } else if (response.type === 'flight_order_form') {
+                contentDiv.innerHTML = formatFlightOrderForm(response.data);
+            } else if (response.type === 'orders_list') {
+                contentDiv.innerHTML = formatOrdersList(response.data);
+            } else if (response.type === 'order_submitted') {
+                contentDiv.innerHTML = formatOrderSubmitted(response.data);
+            } else if (response.type === 'location_selected') {
+                contentDiv.innerHTML = formatLocationSelected(response.data);
+            } else if (response.type === 'department_selection') {
+                contentDiv.innerHTML = formatDepartmentSelection(response.data);
+            } else if (response.type === 'department_selected') {
+                contentDiv.innerHTML = formatDepartmentSelected(response.data);
+            } else if (response.type === 'date_selection') {
+                contentDiv.innerHTML = formatDateSelection(response.data);
+            } else if (response.type === 'date_selected') {
+                contentDiv.innerHTML = formatDateSelected(response.data);
+            } else if (response.type === 'position_selection') {
+                contentDiv.innerHTML = formatPositionSelection(response.data);
+            } else if (response.type === 'position_selected') {
+                contentDiv.innerHTML = formatPositionSelected(response.data);
+            } else if (response.type === 'name_input') {
+                contentDiv.innerHTML = formatNameInput(response.data);
+            } else if (response.type === 'employee_id_input') {
+                contentDiv.innerHTML = formatEmployeeIdInput(response.data);
+            } else if (response.type === 'registration_complete') {
+                contentDiv.innerHTML = formatRegistrationComplete(response.data);
+            } else if (response.type === 'direction_input') {
+                contentDiv.innerHTML = formatDirectionInput(response.data);
+            } else if (response.type === 'wishes_input') {
+                contentDiv.innerHTML = formatWishesInput(response.data);
+            } else if (response.type === 'final_summary') {
+                contentDiv.innerHTML = formatFinalSummary(response.data);
+            } else if (response.type === 'order_confirmed') {
+                contentDiv.innerHTML = formatOrderConfirmed(response.data);
+            } else if (response.type === 'edit_options') {
+                contentDiv.innerHTML = formatEditOptions(response.data);
+            } else if (response.type === 'invalid_location') {
+                contentDiv.innerHTML = formatSimpleMessage(response.data);
+            } else if (response.type === 'invalid_department') {
+                contentDiv.innerHTML = formatSimpleMessage(response.data);
+            } else if (response.type === 'invalid_date') {
+                contentDiv.innerHTML = formatSimpleMessage(response.data);
+            } else if (response.type === 'invalid_position') {
+                contentDiv.innerHTML = formatSimpleMessage(response.data);
+            } else if (response.type === 'invalid_name') {
+                contentDiv.innerHTML = formatSimpleMessage(response.data);
+            } else if (response.type === 'invalid_employee_id') {
+                contentDiv.innerHTML = formatSimpleMessage(response.data);
+            } else if (response.type === 'invalid_direction') {
+                contentDiv.innerHTML = formatSimpleMessage(response.data);
+            } else {
+                contentDiv.innerHTML = formatSimpleMessage(response.data);
+            }
+            
+            messageDiv.appendChild(contentDiv);
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function formatWelcomeMessage(data) {
+            console.log('formatWelcomeMessage received data:', data);
+            
+            if (!data || typeof data !== 'object') {
+                return '<div class="message-text">Ошибка: неверные данные сообщения</div>';
+            }
+            
+            // Получаем данные сообщения
+            const messageData = data.message || data;
+            
+            let html = '';
+            
+            if (messageData.logo) {
+                html += `<div class="message-logo">${messageData.logo}</div>`;
+            }
+            
+            if (messageData.title) {
+                html += `<div class="message-title">${messageData.title}</div>`;
+            }
+            
+            html += '<div class="message-text">';
+            
+            if (messageData.content && Array.isArray(messageData.content)) {
+                messageData.content.forEach(line => {
+                    if (line.startsWith('**') && line.endsWith('**')) {
+                        html += `<strong>${line.slice(2, -2)}</strong><br>`;
+                    } else if (line.startsWith('_') && line.endsWith('_')) {
+                        html += `<em>${line.slice(1, -1)}</em><br>`;
+                    } else if (line.startsWith('•')) {
+                        html += `&nbsp;&nbsp;${line}<br>`;
+                    } else {
+                        html += line + '<br>';
+                    }
+                });
+            }
+            html += '</div>';
+            
+            // Используем locationButtons из корневого объекта data
+            const locationButtons = data.locationButtons || messageData.locationButtons;
+            if (locationButtons && Array.isArray(locationButtons)) {
+                html += '<div class="location-buttons">';
+                locationButtons.forEach(button => {
+                    html += `<button class="location-button" onclick="selectLocation('${button.id}')">${button.icon} ${button.name}</button>`;
+                });
+                html += '</div>';
+            }
+            
+            if (messageData.buttons && Array.isArray(messageData.buttons)) {
+                html += '<div class="buttons">';
+                messageData.buttons.forEach(button => {
+                    html += `<button class="button" onclick="sendMessage('${button.command || button.action}')">${button.text}</button>`;
+                });
+                html += '</div>';
+            }
+            
+            return html;
+        }
+
+        function formatHelpMessage(data) {
+            let html = '<div class="message-text">' + data.message.replace(/\n/g, '<br>') + '</div>';
+            
+            if (data.buttons) {
+                html += '<div class="buttons">';
+                data.buttons.forEach(button => {
+                    html += `<button class="button" onclick="sendMessage('${button.command}')">${button.text}</button>`;
+                });
+                html += '</div>';
+            }
+            
+            return html;
+        }
+
+        function formatFlightOrderForm(data) {
+            let html = `<div class="message-title">${data.message}</div>`;
+            html += '<div class="message-text">Для заказа рейса заполните форму:</div>';
+            
+            if (data.form && data.form.fields) {
+                html += '<div style="margin-top: 15px;">';
+                data.form.fields.forEach(field => {
+                    html += `<div class="form-field">`;
+                    html += `<label>${field.label}${field.required ? ' *' : ''}</label>`;
+                    if (field.type === 'textarea') {
+                        html += `<textarea placeholder="Введите ${field.label.toLowerCase()}"></textarea>`;
+                    } else {
+                        html += `<input type="${field.type}" placeholder="Введите ${field.label.toLowerCase()}">`;
+                    }
+                    html += '</div>';
+                });
+                html += '</div>';
+            }
+            
+            if (data.buttons) {
+                html += '<div class="buttons">';
+                data.buttons.forEach(button => {
+                    html += `<button class="button" onclick="sendMessage('${button.command || button.action}')">${button.text}</button>`;
+                });
+                html += '</div>';
+            }
+            
+            return html;
+        }
+
+        function formatOrdersList(data) {
+            let html = '<div class="message-text">' + data.message.replace(/\n/g, '<br>') + '</div>';
+            
+            if (data.buttons) {
+                html += '<div class="buttons">';
+                data.buttons.forEach(button => {
+                    html += `<button class="button" onclick="sendMessage('${button.command}')">${button.text}</button>`;
+                });
+                html += '</div>';
+            }
+            
+            return html;
+        }
+
+        function formatOrderSubmitted(data) {
+            let html = '<div class="message-text">' + data.message.replace(/\n/g, '<br>') + '</div>';
+            
+            if (data.buttons) {
+                html += '<div class="buttons">';
+                data.buttons.forEach(button => {
+                    html += `<button class="button" onclick="sendMessage('${button.command}')">${button.text}</button>`;
+                });
+                html += '</div>';
+            }
+            
+            return html;
+        }
+
+        function formatLocationSelected(data) {
+            let html = '<div class="message-text">' + data.message.replace(/\n/g, '<br>') + '</div>';
+            
+            if (data.buttons) {
+                html += '<div class="buttons">';
+                data.buttons.forEach(button => {
+                    html += `<button class="button" onclick="sendMessage('${button.command}')">${button.text}</button>`;
+                });
+                html += '</div>';
+            }
+            
+            return html;
+        }
+
+        function formatSimpleMessage(data) {
+            let html = '<div class="message-text">' + data.message + '</div>';
+            
+            if (data.buttons) {
+                html += '<div class="buttons">';
+                data.buttons.forEach(button => {
+                    html += `<button class="button" onclick="sendMessage('${button.command}')">${button.text}</button>`;
+                });
+                html += '</div>';
+            }
+            
+            return html;
+        }
+
+        function formatBotMessage(text) {
+            return '<div class="message-text">' + text + '</div>';
+        }
+
+        function selectLocation(locationId) {
+            sendMessage(`/select_location ${locationId}`);
+        }
+
+        function selectDepartment(departmentId) {
+            sendMessage(`/select_department ${departmentId}`);
+        }
+
+        function selectDate(date) {
+            sendMessage(`/select_date ${date}`);
+        }
+
+        function selectPosition(positionId) {
+            sendMessage(`/select_position ${positionId}`);
+        }
+
+        function formatDepartmentSelection(data) {
+            let html = '<div class="message-text">' + data.message.replace(/\n/g, '<br>') + '</div>';
+            
+            if (data.departmentButtons && Array.isArray(data.departmentButtons)) {
+                html += '<div class="department-buttons">';
+                data.departmentButtons.forEach(button => {
+                    html += `<button class="department-button" onclick="selectDepartment('${button.id}')">${button.name}</button>`;
+                });
+                html += '</div>';
+            }
+            
+            if (data.buttons && Array.isArray(data.buttons)) {
+                html += '<div class="buttons">';
+                data.buttons.forEach(button => {
+                    html += `<button class="button" onclick="sendMessage('${button.command}')">${button.text}</button>`;
+                });
+                html += '</div>';
+            }
+            
+            return html;
+        }
+
+        function formatDepartmentSelected(data) {
+            let html = '<div class="message-text">' + data.message.replace(/\n/g, '<br>') + '</div>';
+            
+            if (data.buttons && Array.isArray(data.buttons)) {
+                html += '<div class="buttons">';
+                data.buttons.forEach(button => {
+                    html += `<button class="button" onclick="sendMessage('${button.command}')">${button.text}</button>`;
+                });
+                html += '</div>';
+            }
+            
+            return html;
+        }
+
+        function formatDateSelection(data) {
+            let html = '<div class="message-text">' + data.message.replace(/\n/g, '<br>') + '</div>';
+            
+            if (data.calendar) {
+                html += formatCalendar(data.calendar);
+            }
+            
+            if (data.buttons && Array.isArray(data.buttons)) {
+                html += '<div class="buttons">';
+                data.buttons.forEach(button => {
+                    html += `<button class="button" onclick="sendMessage('${button.command}')">${button.text}</button>`;
+                });
+                html += '</div>';
+            }
+            
+            return html;
+        }
+
+        function formatDateSelected(data) {
+            let html = '<div class="message-text">' + data.message.replace(/\n/g, '<br>') + '</div>';
+            
+            if (data.buttons && Array.isArray(data.buttons)) {
+                html += '<div class="buttons">';
+                data.buttons.forEach(button => {
+                    html += `<button class="button" onclick="sendMessage('${button.command}')">${button.text}</button>`;
+                });
+                html += '</div>';
+            }
+            
+            return html;
+        }
+
+        function formatCalendar(calendar) {
+            let html = '<div class="calendar-container">';
+            
+            // Заголовок календаря с навигацией
+            html += '<div class="calendar-header">';
+            html += '<button class="calendar-nav">⬅️</button>';
+            html += `<button class="calendar-month">${calendar.month} ${calendar.year}</button>`;
+            html += '<button class="calendar-nav">➡️</button>';
+            html += '</div>';
+            
+            // Дни недели
+            html += '<div class="calendar-days-header">';
+            calendar.daysOfWeek.forEach(day => {
+                html += `<button class="calendar-day-header">${day}</button>`;
+            });
+            html += '</div>';
+            
+            // Дни месяца
+            html += '<div class="calendar-days">';
+            calendar.days.forEach(day => {
+                if (day.empty) {
+                    html += '<button class="calendar-day empty"></button>';
+                } else {
+                    const specialClass = day.special ? ' special' : '';
+                    html += `<button class="calendar-day${specialClass}" onclick="selectDate('${day.date}')">${day.day}</button>`;
+                }
+            });
+            html += '</div>';
+            
+            html += '</div>';
+            return html;
+        }
+
+        function formatPositionSelection(data) {
+            let html = '<div class="message-text">' + data.message.replace(/\n/g, '<br>') + '</div>';
+            
+            if (data.positionButtons && Array.isArray(data.positionButtons)) {
+                html += '<div class="position-buttons">';
+                data.positionButtons.forEach(button => {
+                    html += `<button class="position-button" onclick="selectPosition('${button.id}')">${button.name}</button>`;
+                });
+                html += '</div>';
+            }
+            
+            if (data.buttons && Array.isArray(data.buttons)) {
+                html += '<div class="buttons">';
+                data.buttons.forEach(button => {
+                    html += `<button class="button" onclick="sendMessage('${button.command}')">${button.text}</button>`;
+                });
+                html += '</div>';
+            }
+            
+            return html;
+        }
+
+        function formatPositionSelected(data) {
+            let html = '<div class="message-text">' + data.message.replace(/\n/g, '<br>') + '</div>';
+            
+            if (data.buttons && Array.isArray(data.buttons)) {
+                html += '<div class="buttons">';
+                data.buttons.forEach(button => {
+                    html += `<button class="button" onclick="sendMessage('${button.command}')">${button.text}</button>`;
+                });
+                html += '</div>';
+            }
+            
+            return html;
+        }
+
+        function formatNameInput(data) {
+            let html = '<div class="message-text">' + data.message.replace(/\n/g, '<br>') + '</div>';
+            
+            if (data.formatBlock) {
+                html += '<div class="format-block">';
+                html += '<button class="copy-button" onclick="copyToClipboard(\'ФИО\\nТабельный номер\')">копировать</button>';
+                html += '<div class="format-fields">';
+                data.formatBlock.fields.forEach(field => {
+                    html += field + '<br>';
+                });
+                html += '</div>';
+                html += '</div>';
+                
+                html += '<div class="message-text">Например:</div>';
+                html += '<div class="format-example">';
+                html += '<button class="copy-button" onclick="copyToClipboard(\'Соколянский А.В.\\n119356\')">копировать</button>';
+                html += '<div class="example-text">';
+                data.formatBlock.example.forEach(example => {
+                    html += example + '<br>';
+                });
+                html += '</div>';
+                html += '</div>';
+            }
+            
+            if (data.buttons && Array.isArray(data.buttons)) {
+                html += '<div class="buttons">';
+                data.buttons.forEach(button => {
+                    html += `<button class="button" onclick="sendMessage('${button.command}')">${button.text}</button>`;
+                });
+                html += '</div>';
+            }
+            
+            return html;
+        }
+
+        function formatEmployeeIdInput(data) {
+            let html = '<div class="message-text">' + data.message.replace(/\n/g, '<br>') + '</div>';
+            
+            if (data.buttons && Array.isArray(data.buttons)) {
+                html += '<div class="buttons">';
+                data.buttons.forEach(button => {
+                    html += `<button class="button" onclick="sendMessage('${button.command}')">${button.text}</button>`;
+                });
+                html += '</div>';
+            }
+            
+            return html;
+        }
+
+        function formatRegistrationComplete(data) {
+            let html = '<div class="message-text">' + data.message.replace(/\n/g, '<br>') + '</div>';
+            
+            if (data.buttons && Array.isArray(data.buttons)) {
+                html += '<div class="buttons">';
+                data.buttons.forEach(button => {
+                    html += `<button class="button" onclick="sendMessage('${button.command}')">${button.text}</button>`;
+                });
+                html += '</div>';
+            }
+            
+            return html;
+        }
+
+        function formatDirectionInput(data) {
+            let html = '<div class="message-text">' + data.message.replace(/\n/g, '<br>') + '</div>';
+            
+            if (data.buttons && Array.isArray(data.buttons)) {
+                html += '<div class="buttons">';
+                data.buttons.forEach(button => {
+                    html += `<button class="button" onclick="sendMessage('${button.command}')">${button.text}</button>`;
+                });
+                html += '</div>';
+            }
+            
+            return html;
+        }
+
+        function formatWishesInput(data) {
+            let html = '<div class="message-text">' + data.message.replace(/\n/g, '<br>') + '</div>';
+            
+            if (data.buttons && Array.isArray(data.buttons)) {
+                html += '<div class="buttons">';
+                data.buttons.forEach(button => {
+                    html += `<button class="button" onclick="sendMessage('${button.command}')">${button.text}</button>`;
+                });
+                html += '</div>';
+            }
+            
+            return html;
+        }
+
+        function formatFinalSummary(data) {
+            let html = '<div class="message-text">' + data.message + '</div>';
+            
+            if (data.summary) {
+                html += '<div class="summary-container">';
+                html += `<div class="summary-item">
+                            <span class="summary-label">Локация:</span>
+                            <span class="summary-value">${data.summary.location}</span>
+                         </div>`;
+                html += `<div class="summary-item">
+                            <span class="summary-label">ОКЭ:</span>
+                            <span class="summary-value">${data.summary.department}</span>
+                         </div>`;
+                html += `<div class="summary-item">
+                            <span class="summary-label">Дата:</span>
+                            <span class="summary-value">${data.summary.date}</span>
+                         </div>`;
+                html += `<div class="summary-item">
+                            <span class="summary-label">Должность:</span>
+                            <span class="summary-value">${data.summary.position}</span>
+                         </div>`;
+                html += `<div class="summary-item">
+                            <span class="summary-label">ФИО:</span>
+                            <span class="summary-value">${data.summary.fullName}</span>
+                         </div>`;
+                html += `<div class="summary-item">
+                            <span class="summary-label">Табельный номер:</span>
+                            <span class="summary-value">${data.summary.employeeId}</span>
+                         </div>`;
+                html += `<div class="summary-item">
+                            <span class="summary-label">Направление:</span>
+                            <span class="summary-value">${data.summary.direction}</span>
+                         </div>`;
+                html += `<div class="summary-item">
+                            <span class="summary-label">Пожелания:</span>
+                            <span class="summary-value">${data.summary.wishes}</span>
+                         </div>`;
+                html += `<div class="summary-timestamp">${new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</div>`;
+                html += '</div>';
+            }
+            
+            if (data.buttons && Array.isArray(data.buttons)) {
+                data.buttons.forEach(button => {
+                    if (button.style === 'confirm') {
+                        html += `<button class="confirm-button" onclick="sendMessage('${button.command}')">${button.text}</button>`;
+                    } else if (button.style === 'edit') {
+                        html += `<button class="edit-button" onclick="sendMessage('${button.command}')">${button.text}</button>`;
+                    } else {
+                        html += `<button class="button" onclick="sendMessage('${button.command}')">${button.text}</button>`;
+                    }
+                });
+            }
+            
+            return html;
+        }
+
+        function formatOrderConfirmed(data) {
+            let html = '<div class="message-text">' + data.message.replace(/\n/g, '<br>') + '</div>';
+            
+            if (data.buttons && Array.isArray(data.buttons)) {
+                data.buttons.forEach(button => {
+                    if (button.text === '/start') {
+                        html += `<div style="margin-top: 15px; text-align: center;">
+                                    <button class="start-link-button" onclick="sendMessage('${button.command}')">${button.text}</button>
+                                 </div>`;
+                    } else {
+                        html += '<div class="buttons">';
+                        html += `<button class="button" onclick="sendMessage('${button.command}')">${button.text}</button>`;
+                        html += '</div>';
+                    }
+                });
+            }
+            
+            return html;
+        }
+
+        function formatEditOptions(data) {
+            let html = '<div class="message-text">' + data.message + '</div>';
+            
+            if (data.buttons && Array.isArray(data.buttons)) {
+                html += '<div class="buttons">';
+                data.buttons.forEach(button => {
+                    html += `<button class="button" onclick="sendMessage('${button.command}')">${button.text}</button>`;
+                });
+                html += '</div>';
+            }
+            
+            return html;
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(function() {
+                console.log('Text copied to clipboard');
+            }, function(err) {
+                console.error('Could not copy text: ', err);
+            });
+        }
+
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('messageInput').focus();
+            // Автоматически отправляем команду /start при загрузке
+            sendMessage('/start');
+        });
+    </script>
+</body>
+</html>
+
+

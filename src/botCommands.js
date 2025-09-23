@@ -1,53 +1,61 @@
 const GitHubAPI = require('./github');
+const TestFunctions = require('./testFunctions');
 
 class BotCommands {
-  constructor(githubAPI) {
+  constructor(githubAPI, logger, adminManager) {
     this.github = githubAPI;
+    this.logger = logger;
+    this.adminManager = adminManager;
+    this.testFunctions = new TestFunctions();
     this.commands = new Map();
     this.setupCommands();
   }
 
   setupCommands() {
-    // Команда: /user <username>
     this.commands.set('user', {
       description: 'Получить информацию о пользователе GitHub',
       usage: '/user <username>',
       handler: this.getUserInfo.bind(this)
     });
-
-    // Команда: /repos <username>
     this.commands.set('repos', {
       description: 'Получить список репозиториев пользователя',
       usage: '/repos <username> [options]',
       handler: this.getUserRepos.bind(this)
     });
-
-    // Команда: /repo <owner/repo>
     this.commands.set('repo', {
       description: 'Получить информацию о репозитории',
       usage: '/repo <owner/repo>',
       handler: this.getRepoInfo.bind(this)
     });
-
-    // Команда: /issues <owner/repo>
     this.commands.set('issues', {
       description: 'Получить issues репозитория',
       usage: '/issues <owner/repo> [state]',
       handler: this.getRepoIssues.bind(this)
     });
-
-    // Команда: /prs <owner/repo>
     this.commands.set('prs', {
       description: 'Получить pull requests репозитория',
       usage: '/prs <owner/repo> [state]',
       handler: this.getRepoPullRequests.bind(this)
     });
-
-    // Команда: /help
     this.commands.set('help', {
       description: 'Показать список доступных команд',
       usage: '/help',
       handler: this.showHelp.bind(this)
+    });
+    this.commands.set('test', {
+      description: 'Запустить тесты системы',
+      usage: '/test [all|db|github|redis|logs|webhook|admin|perf]',
+      handler: this.runTests.bind(this)
+    });
+    this.commands.set('status', {
+      description: 'Показать статус системы',
+      usage: '/status',
+      handler: this.showStatus.bind(this)
+    });
+    this.commands.set('ping', {
+      description: 'Проверить отклик бота',
+      usage: '/ping',
+      handler: this.ping.bind(this)
     });
   }
 
@@ -114,8 +122,6 @@ class BotCommands {
       sort: 'updated',
       per_page: 10
     };
-
-    // Парсинг дополнительных опций
     if (args.length > 1) {
       const sortOption = args[1];
       if (['created', 'updated', 'pushed', 'full_name'].includes(sortOption)) {
@@ -264,6 +270,120 @@ class BotCommands {
 
   getAvailableCommands() {
     return Array.from(this.commands.keys());
+  }
+
+  async runTests(args) {
+    const testType = args[0] || 'all';
+    
+    try {
+      let result;
+      
+      switch (testType) {
+        case 'all':
+          result = await this.testFunctions.runAllTests(this.github, this.logger, this.adminManager);
+          break;
+        case 'db':
+          result = await this.testFunctions.testDatabase();
+          break;
+        case 'github':
+          result = await this.testFunctions.testGitHubAPI(this.github);
+          break;
+        case 'redis':
+          result = await this.testFunctions.testRedis();
+          break;
+        case 'logs':
+          result = this.testFunctions.testLogging(this.logger);
+          break;
+        case 'webhook':
+          result = this.testFunctions.testWebhookValidation();
+          break;
+        case 'admin':
+          result = this.testFunctions.testAdminSystem(this.adminManager);
+          break;
+        case 'perf':
+          result = await this.testFunctions.testPerformance();
+          break;
+        default:
+          return {
+            type: 'error',
+            data: {
+              message: `Неизвестный тип теста: ${testType}`,
+              available_tests: ['all', 'db', 'github', 'redis', 'logs', 'webhook', 'admin', 'perf']
+            }
+          };
+      }
+      
+      return {
+        type: 'test_result',
+        data: result
+      };
+    } catch (error) {
+      return {
+        type: 'error',
+        data: {
+          message: `Ошибка выполнения теста: ${error.message}`,
+          test_type: testType
+        }
+      };
+    }
+  }
+
+  async showStatus() {
+    try {
+      const memoryUsage = process.memoryUsage();
+      const uptime = process.uptime();
+      
+      const status = {
+        bot: {
+          status: 'running',
+          uptime: `${Math.floor(uptime / 60)} минут ${Math.floor(uptime % 60)} секунд`,
+          version: '1.0.0',
+          node_version: process.version
+        },
+        memory: {
+          rss: `${Math.round(memoryUsage.rss / 1024 / 1024)}MB`,
+          heap_used: `${Math.round(memoryUsage.heapUsed / 1024 / 1024)}MB`,
+          heap_total: `${Math.round(memoryUsage.heapTotal / 1024 / 1024)}MB`,
+          external: `${Math.round(memoryUsage.external / 1024 / 1024)}MB`
+        },
+        system: {
+          platform: process.platform,
+          arch: process.arch,
+          pid: process.pid
+        },
+        commands: {
+          total: this.commands.size,
+          available: this.getAvailableCommands()
+        }
+      };
+      
+      return {
+        type: 'status',
+        data: status
+      };
+    } catch (error) {
+      return {
+        type: 'error',
+        data: {
+          message: `Ошибка получения статуса: ${error.message}`
+        }
+      };
+    }
+  }
+
+  async ping() {
+    const startTime = Date.now();
+    const responseTime = Date.now() - startTime;
+    
+    return {
+      type: 'pong',
+      data: {
+        message: 'Pong! 🏓',
+        response_time: `${responseTime}ms`,
+        timestamp: new Date().toISOString(),
+        uptime: `${Math.floor(process.uptime())} секунд`
+      }
+    };
   }
 }
 

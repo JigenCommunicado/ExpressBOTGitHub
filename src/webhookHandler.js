@@ -9,31 +9,14 @@ class WebhookHandler {
   }
 
   setupEventHandlers() {
-    // Обработчик события push
     this.eventHandlers.set('push', this.handlePushEvent.bind(this));
-    
-    // Обработчик события pull_request
     this.eventHandlers.set('pull_request', this.handlePullRequestEvent.bind(this));
-    
-    // Обработчик события issues
     this.eventHandlers.set('issues', this.handleIssuesEvent.bind(this));
-    
-    // Обработчик события issue_comment
     this.eventHandlers.set('issue_comment', this.handleIssueCommentEvent.bind(this));
-    
-    // Обработчик события create
     this.eventHandlers.set('create', this.handleCreateEvent.bind(this));
-    
-    // Обработчик события delete
     this.eventHandlers.set('delete', this.handleDeleteEvent.bind(this));
-    
-    // Обработчик события fork
     this.eventHandlers.set('fork', this.handleForkEvent.bind(this));
-    
-    // Обработчик события star
     this.eventHandlers.set('star', this.handleStarEvent.bind(this));
-    
-    // Обработчик события watch
     this.eventHandlers.set('watch', this.handleWatchEvent.bind(this));
   }
 
@@ -202,13 +185,9 @@ class WebhookHandler {
       author: sender.login
     };
   }
-
-  // Валидация webhook подписи
   validateSignature(payload, signature, secret) {
     return this.github.validateWebhookSignature(payload, signature, secret);
   }
-
-  // Получить список поддерживаемых событий
   getSupportedEvents() {
     return Array.from(this.eventHandlers.keys());
   }

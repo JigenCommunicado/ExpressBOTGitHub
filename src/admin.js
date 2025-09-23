@@ -11,8 +11,6 @@ class AdminManager {
     this.initializeDefaultAdmin();
     this.setupDefaultPermissions();
   }
-
-  // Инициализация администратора по умолчанию
   initializeDefaultAdmin() {
     const defaultAdmin = {
       id: 'admin',
@@ -28,8 +26,6 @@ class AdminManager {
     
     this.admins.set('admin', defaultAdmin);
   }
-
-  // Настройка прав доступа по умолчанию
   setupDefaultPermissions() {
     this.permissions.set('super_admin', [
       'user.create', 'user.read', 'user.update', 'user.delete',
@@ -48,13 +44,9 @@ class AdminManager {
       'bot.commands', 'bot.monitoring'
     ]);
   }
-
-  // Хеширование пароля
   hashPassword(password) {
     return crypto.createHash('sha256').update(password + 'smartapp_salt').digest('hex');
   }
-
-  // Аутентификация
   async authenticate(username, password) {
     const admin = this.admins.get(username);
     if (!admin || !admin.is_active) {
@@ -65,12 +57,8 @@ class AdminManager {
     if (admin.password !== hashedPassword) {
       return { success: false, message: 'Неверный пароль' };
     }
-
-    // Обновляем время последнего входа
     admin.last_login = new Date();
     this.admins.set(username, admin);
-
-    // Создаем сессию
     const sessionId = crypto.randomUUID();
     this.sessions.set(sessionId, {
       admin_id: admin.id,
@@ -94,8 +82,6 @@ class AdminManager {
       }
     };
   }
-
-  // Проверка сессии
   validateSession(sessionId) {
     const session = this.sessions.get(sessionId);
     if (!session) {
@@ -109,19 +95,13 @@ class AdminManager {
 
     return { valid: true, session };
   }
-
-  // Проверка прав доступа
   hasPermission(role, permission) {
     const rolePermissions = this.permissions.get(role) || [];
     return rolePermissions.includes('*') || rolePermissions.includes(permission);
   }
-
-  // Получение прав для роли
   getPermissions(role) {
     return this.permissions.get(role) || [];
   }
-
-  // Управление пользователями
   async createUser(userData) {
     const userId = crypto.randomUUID();
     const user = {
@@ -174,8 +154,6 @@ class AdminManager {
 
     return { success: true };
   }
-
-  // Управление администраторами
   async createAdmin(adminData, requesterRole) {
     if (!this.hasPermission(requesterRole, 'admin.create')) {
       return { success: false, message: 'Недостаточно прав' };
@@ -197,8 +175,6 @@ class AdminManager {
 
     return { success: true, admin: { id: adminId, username: admin.username, email: admin.email, role: admin.role } };
   }
-
-  // Системные команды
   async getSystemStats() {
     return {
       admins_count: this.admins.size,
@@ -216,8 +192,6 @@ class AdminManager {
       .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
       .slice(0, limit);
   }
-
-  // Логирование аудита
   logAudit(action, adminId, details = {}) {
     const logEntry = {
       id: crypto.randomUUID(),
@@ -225,23 +199,17 @@ class AdminManager {
       admin_id: adminId,
       details,
       timestamp: new Date(),
-      ip: 'localhost' // В реальном приложении получать из запроса
+      ip: 'localhost'
     };
 
     this.auditLog.push(logEntry);
-
-    // Ограничиваем размер лога
     if (this.auditLog.length > 10000) {
       this.auditLog = this.auditLog.slice(-5000);
     }
   }
-
-  // Получение всех пользователей
   getAllUsers() {
     return Array.from(this.users.values());
   }
-
-  // Получение всех администраторов
   getAllAdmins() {
     return Array.from(this.admins.values()).map(admin => ({
       id: admin.id,
@@ -253,8 +221,6 @@ class AdminManager {
       is_active: admin.is_active
     }));
   }
-
-  // Выход из системы
   logout(sessionId) {
     const session = this.sessions.get(sessionId);
     if (session) {

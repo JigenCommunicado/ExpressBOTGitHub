@@ -10,8 +10,6 @@ class GitHubAPI {
       'User-Agent': 'ExpressBOT-GitHub-Integration'
     };
   }
-
-  // Получить информацию о пользователе
   async getUser(username) {
     try {
       const response = await axios.get(`${this.baseURL}/users/${username}`, {
@@ -23,8 +21,6 @@ class GitHubAPI {
       throw error;
     }
   }
-
-  // Получить репозитории пользователя
   async getUserRepos(username, options = {}) {
     try {
       const params = {
@@ -44,8 +40,6 @@ class GitHubAPI {
       throw error;
     }
   }
-
-  // Получить информацию о репозитории
   async getRepo(owner, repo) {
     try {
       const response = await axios.get(`${this.baseURL}/repos/${owner}/${repo}`, {
@@ -57,8 +51,6 @@ class GitHubAPI {
       throw error;
     }
   }
-
-  // Получить issues репозитория
   async getRepoIssues(owner, repo, options = {}) {
     try {
       const params = {
@@ -79,8 +71,6 @@ class GitHubAPI {
       throw error;
     }
   }
-
-  // Получить pull requests репозитория
   async getRepoPullRequests(owner, repo, options = {}) {
     try {
       const params = {
@@ -101,8 +91,6 @@ class GitHubAPI {
       throw error;
     }
   }
-
-  // Создать issue
   async createIssue(owner, repo, issueData) {
     try {
       const response = await axios.post(`${this.baseURL}/repos/${owner}/${repo}/issues`, {
@@ -119,8 +107,6 @@ class GitHubAPI {
       throw error;
     }
   }
-
-  // Получить webhook события
   async getWebhookEvents() {
     return [
       'push',
@@ -134,8 +120,6 @@ class GitHubAPI {
       'watch'
     ];
   }
-
-  // Валидация webhook подписи
   validateWebhookSignature(payload, signature, secret) {
     const crypto = require('crypto');
     const expectedSignature = 'sha256=' + crypto

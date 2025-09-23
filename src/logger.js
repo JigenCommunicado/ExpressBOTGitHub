@@ -8,15 +8,12 @@ class Logger {
     this.logDir = options.logDir || './logs';
     this.maxFileSize = options.maxFileSize || 10 * 1024 * 1024; // 10MB
     this.maxFiles = options.maxFiles || 5;
-    
     this.levels = {
       error: 0,
       warn: 1,
       info: 2,
       debug: 3
     };
-
-    // Создаем директорию для логов если нужно
     if (this.logToFile && !fs.existsSync(this.logDir)) {
       fs.mkdirSync(this.logDir, { recursive: true });
     }
@@ -40,8 +37,6 @@ class Logger {
 
     try {
       fs.appendFileSync(logFile, formattedMessage);
-      
-      // Проверяем размер файла и ротируем если нужно
       this.rotateLogFile(logFile);
     } catch (error) {
       console.error('Error writing to log file:', error);
@@ -52,7 +47,6 @@ class Logger {
     try {
       const stats = fs.statSync(logFile);
       if (stats.size > this.maxFileSize) {
-        // Переименовываем существующие файлы
         for (let i = this.maxFiles - 1; i > 0; i--) {
           const oldFile = `${logFile}.${i}`;
           const newFile = `${logFile}.${i + 1}`;
@@ -60,8 +54,6 @@ class Logger {
             fs.renameSync(oldFile, newFile);
           }
         }
-        
-        // Переименовываем текущий файл
         fs.renameSync(logFile, `${logFile}.1`);
       }
     } catch (error) {
@@ -73,8 +65,6 @@ class Logger {
     if (!this.shouldLog(level)) return;
 
     const formattedMessage = this.formatMessage(level, message, meta);
-    
-    // Выводим в консоль
     switch (level) {
       case 'error':
         console.error(formattedMessage);
@@ -91,8 +81,6 @@ class Logger {
       default:
         console.log(formattedMessage);
     }
-
-    // Записываем в файл если нужно
     this.writeToFile(level, message, meta);
   }
 
@@ -111,8 +99,6 @@ class Logger {
   debug(message, meta = {}) {
     this.log('debug', message, meta);
   }
-
-  // Специальные методы для разных типов событий
   webhook(event, payload, result) {
     this.info(`Webhook ${event} processed`, {
       event,
@@ -138,8 +124,6 @@ class Logger {
       responseTime: `${responseTime}ms`
     });
   }
-
-  // Middleware для Express
   middleware() {
     return (req, res, next) => {
       const start = Date.now();

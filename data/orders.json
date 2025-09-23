@@ -1,0 +1,62 @@
+[
+  {
+    "id": "C46I85B1",
+    "user_id": "user123",
+    "full_name": "Соколянский А.В. 119356",
+    "employee_id": "119356",
+    "position": "sbe",
+    "location": "moscow",
+    "department": "oke1",
+    "flight_date": "2025-09-25",
+    "direction": "Варадеро",
+    "wishes": "-",
+    "status": "confirmed",
+    "created_at": "2025-09-21T18:48:54.390Z",
+    "updated_at": "2025-09-21T19:00:41.287Z"
+  },
+  {
+    "id": "7O8BIFK8",
+    "user_id": "test123",
+    "full_name": "??????????? ..",
+    "employee_id": "119356",
+    "position": "bp",
+    "location": "moscow",
+    "department": "oke1",
+    "flight_date": "2025-09-26",
+    "direction": "??????????",
+    "wishes": "???????? ?? ???? ? ????????????",
+    "status": "confirmed",
+    "created_at": "2025-09-21T18:39:36.133Z",
+    "updated_at": "2025-09-21T19:00:46.507Z"
+  },
+  {
+    "id": "2T86XGBI",
+    "user_id": "user123",
+    "full_name": "Соколянский А.В. 119356",
+    "employee_id": "119356",
+    "position": "sbe",
+    "location": "moscow",
+    "department": "oke1",
+    "flight_date": "2025-09-24",
+    "direction": "Варадеро",
+    "wishes": "-",
+    "status": "pending",
+    "created_at": "2025-09-22T06:52:25.503Z",
+    "updated_at": "2025-09-22T06:52:25.503Z"
+  },
+  {
+    "id": "QGSUBXYY",
+    "user_id": "user123",
+    "full_name": "Соколянский А.В. 119356",
+    "employee_id": "119356",
+    "position": "sbe",
+    "location": "moscow",
+    "department": "oke3",
+    "flight_date": "2025-09-24",
+    "direction": "Москва",
+    "wishes": "-",
+    "status": "pending",
+    "created_at": "2025-09-22T07:01:08.683Z",
+    "updated_at": "2025-09-22T07:01:08.683Z"
+  }
+]
