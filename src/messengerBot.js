@@ -8,6 +8,36 @@ class MessengerBot {
     this.flightRequests = new Map();
     this.database = new DatabaseManager();
     this.quotaManager = new WeekendQuotaManager();
+    
+    // Общие объекты для маппинга
+    this.departments = {
+      'moscow': { name: 'Москва', icon: '🏛️' },
+      'spb': { name: 'Санкт-Петербург', icon: '🏛️' },
+      'krasnoyarsk': { name: 'Красноярск', icon: '🏔️' },
+      'sochi': { name: 'Сочи', icon: '🌴' }
+    };
+
+    this.positions = {
+      'bp': { name: 'БП' },
+      'bp_bs': { name: 'БП BS' },
+      'sbe': { name: 'СБЭ' },
+      'ipb': { name: 'ИПБ' }
+    };
+
+    this.departmentsMapping = {
+      'moscow': 'Москва',
+      'spb': 'Санкт-Петербург', 
+      'krasnoyarsk': 'Красноярск',
+      'sochi': 'Сочи'
+    };
+
+    this.positionsMapping = {
+      'bp': 'BP',
+      'bp_bs': 'BP BS',
+      'sbe': 'SBE',
+      'ipb': 'IPB'
+    };
+    
     this.setupCommands();
     this.initDatabase();
   }
@@ -164,6 +194,21 @@ class MessengerBot {
     this.commands.set('weekend_cancel_weekend', {
       description: 'Отменить конкретный выходной',
       handler: this.handleWeekendCancelWeekend.bind(this)
+    });
+
+    this.commands.set('weekend_quota_stats', {
+      description: 'Показать статистику квот',
+      handler: this.handleWeekendQuotaStats.bind(this)
+    });
+
+    this.commands.set('weekend_fullname_input', {
+      description: 'Ввод ФИО для заказа выходных',
+      handler: this.handleWeekendFullnameInput.bind(this)
+    });
+
+    this.commands.set('weekend_employee_id_input', {
+      description: 'Ввод табельного номера для заказа выходных',
+      handler: this.handleWeekendEmployeeIdInput.bind(this)
     });
   }
 
@@ -649,12 +694,7 @@ class MessengerBot {
     const positionId = args[0];
     const user = this.getOrCreateUser(userId);
     
-    const positions = {
-      'bp': { name: 'БП' },
-      'bp_bs': { name: 'БП BS' },
-      'sbe': { name: 'СБЭ' },
-      'ipb': { name: 'ИПБ' }
-    };
+    const positions = this.positions;
 
     const position = positions[positionId];
     if (!position) {
@@ -700,7 +740,7 @@ class MessengerBot {
     return {
       type: 'name_input',
       data: {
-        message: `✅ Выбрана должность: ${position.name}\n📅 Дата: ${formattedDate}\n📍 Локация: ${location.icon} ${location.name}\n🏢 Подразделение: ${department.name}\n\n✏️ Отлично!\n\nТеперь введите ваши ФИО и Табельный номер одним сообщением, используя следующий формат:`,
+        message: `✅ Выбрана должность: ${positionInfo.name}\n📅 Дата: ${formattedDate}\n📍 Локация: ${location.icon} ${location.name}\n🏢 Подразделение: ${department.name}\n\n✏️ Отлично!\n\nТеперь введите ваши ФИО и Табельный номер одним сообщением, используя следующий формат:`,
         formatBlock: {
           fields: [
             'ФИО',
@@ -790,12 +830,7 @@ class MessengerBot {
       'olsit': { name: 'ОЛСИТ' }
     };
 
-    const positions = {
-      'bp': { name: 'БП' },
-      'bp_bs': { name: 'БП BS' },
-      'sbe': { name: 'СБЭ' },
-      'ipb': { name: 'ИПБ' }
-    };
+    const positions = this.positions;
 
     const location = locations[user.selectedLocation];
     const department = departments[user.selectedDepartment];
@@ -804,7 +839,7 @@ class MessengerBot {
     return {
       type: 'direction_input',
       data: {
-        message: `✅ Регистрация завершена!\n\n👤 ФИО: ${user.fullName}\n🔢 Табельный номер: ${user.employeeId}\n👨‍✈️ Должность: ${position.name}\n📅 Дата: ${formattedDate}\n📍 Локация: ${location.icon} ${location.name}\n🏢 Подразделение: ${department.name}\n\n✈️ Введите желаемое направление:`,
+        message: `✅ Регистрация завершена!\n\n👤 ФИО: ${user.fullName}\n🔢 Табельный номер: ${user.employeeId}\n👨‍✈️ Должность: ${positionInfo.name}\n📅 Дата: ${formattedDate}\n📍 Локация: ${location.icon} ${location.name}\n🏢 Подразделение: ${department.name}\n\n✈️ Введите желаемое направление:`,
         buttons: [
           { text: '⬅️ Назад к вводу табельного номера', command: '/select_position ' + user.selectedPosition }
         ]
@@ -853,12 +888,7 @@ class MessengerBot {
       'olsit': { name: 'ОЛСИТ' }
     };
 
-    const positions = {
-      'bp': { name: 'БП' },
-      'bp_bs': { name: 'БП BS' },
-      'sbe': { name: 'СБЭ' },
-      'ipb': { name: 'ИПБ' }
-    };
+    const positions = this.positions;
 
     const location = locations[user.selectedLocation];
     const department = departments[user.selectedDepartment];
@@ -867,7 +897,7 @@ class MessengerBot {
     return {
       type: 'wishes_input',
       data: {
-        message: `✅ Регистрация завершена!\n\n👤 ФИО: ${user.fullName}\n🔢 Табельный номер: ${user.employeeId}\n👨‍✈️ Должность: ${position.name}\n📅 Дата: ${formattedDate}\n📍 Локация: ${location.icon} ${location.name}\n🏢 Подразделение: ${department.name}\n✈️ Направление: ${user.direction}\n\n📝 Отлично! Теперь укажите ваши пожелания. Если пожелания отсутствуют, то поставьте прочерк:`,
+        message: `✅ Регистрация завершена!\n\n👤 ФИО: ${user.fullName}\n🔢 Табельный номер: ${user.employeeId}\n👨‍✈️ Должность: ${positionInfo.name}\n📅 Дата: ${formattedDate}\n📍 Локация: ${location.icon} ${location.name}\n🏢 Подразделение: ${department.name}\n✈️ Направление: ${user.direction}\n\n📝 Отлично! Теперь укажите ваши пожелания. Если пожелания отсутствуют, то поставьте прочерк:`,
         buttons: [
           { text: '⬅️ Назад к вводу направления', command: '/select_position ' + user.selectedPosition }
         ]
@@ -903,12 +933,7 @@ class MessengerBot {
       'olsit': { name: 'ОЛСИТ' }
     };
 
-    const positions = {
-      'bp': { name: 'БП' },
-      'bp_bs': { name: 'БП BS' },
-      'sbe': { name: 'СБЭ' },
-      'ipb': { name: 'ИПБ' }
-    };
+    const positions = this.positions;
 
     const location = locations[user.selectedLocation];
     const department = departments[user.selectedDepartment];
@@ -922,7 +947,7 @@ class MessengerBot {
           location: location.name,
           department: department.name,
           date: formattedDate,
-          position: position.name,
+          position: positionInfo.name,
           fullName: user.fullName,
           employeeId: user.employeeId,
           direction: user.direction,
@@ -1209,18 +1234,39 @@ class MessengerBot {
     const user = this.getOrCreateUser(userId);
     user.state = 'weekend_menu';
     
+    // Проверяем, заполнены ли данные пользователя
+    const hasCompleteData = user.weekendOrder && user.weekendOrder.isComplete;
+    
+    let message = '🏖️ Управление выходными днями';
+    let description = '';
+    let buttons = [];
+    
+    if (hasCompleteData) {
+      // Если данные заполнены, показываем все функции
+      description = 'Данные заполнены. Выберите действие:';
+      buttons = [
+        { text: '📅 Заказать выходной', command: '/weekend_book' },
+        { text: '❌ Отменить выходной', command: '/weekend_cancel' },
+        { text: '📋 Свободные даты', command: '/weekend_free_dates' },
+        { text: '📝 Заказанные даты', command: '/weekend_booked_dates' },
+        { text: '📊 Статистика квот', command: '/weekend_quota_stats' },
+        { text: '⬅️ Назад в главное меню', command: '/start' }
+      ];
+    } else {
+      // Если данные не заполнены, показываем только заказ выходных
+      description = 'Для работы с выходными днями необходимо заполнить данные. Начните с заказа выходного дня.';
+      buttons = [
+        { text: '📅 Заказать выходной', command: '/weekend_book' },
+        { text: '⬅️ Назад в главное меню', command: '/start' }
+      ];
+    }
+    
     return {
       type: 'weekend_menu',
       data: {
-        message: '🏖️ Управление выходными днями',
-        description: 'Выберите действие:',
-        buttons: [
-          { text: '📅 Заказать выходной', command: '/weekend_book' },
-          { text: '❌ Отменить выходной', command: '/weekend_cancel' },
-          { text: '📋 Свободные даты', command: '/weekend_free_dates' },
-          { text: '📝 Заказанные даты', command: '/weekend_booked_dates' },
-          { text: '⬅️ Назад в главное меню', command: '/start' }
-        ]
+        message: message,
+        description: description,
+        buttons: buttons
       }
     };
   }
@@ -1282,14 +1328,22 @@ class MessengerBot {
   // Обработчики для управления выходными днями
   handleWeekendBook(userId, args) {
     const user = this.getOrCreateUser(userId);
-    user.state = 'weekend_department_selection';
-    user.weekendOrder = {}; // Инициализируем объект заказа
+    user.state = 'weekend_location_selection';
+    user.weekendOrder = {
+      location: null,
+      department: null,
+      position: null,
+      fullName: null,
+      employeeId: null,
+      selectedDates: [],
+      isComplete: false
+    }; // Инициализируем объект заказа
     
     return {
-      type: 'weekend_department_selection',
+      type: 'weekend_location_selection',
       data: {
         message: '🏖️ Заказ выходного дня',
-        description: 'Выберите ваше подразделение:',
+        description: 'Для заказа выходного дня необходимо заполнить данные. Выберите ваше подразделение:',
         departmentButtons: [
           { id: 'moscow', name: 'Москва', icon: '🏛️' },
           { id: 'spb', name: 'Санкт-Петербург', icon: '🏛️' },
@@ -1339,13 +1393,13 @@ class MessengerBot {
   handleWeekendFreeDates(userId, args) {
     const user = this.getOrCreateUser(userId);
     
-    // Если пользователь еще не выбрал подразделение и должность, показываем общую информацию
-    if (!user.weekendOrder.department || !user.weekendOrder.position) {
+    // Проверяем, заполнены ли данные пользователя
+    if (!user.weekendOrder || !user.weekendOrder.isComplete) {
       return {
-        type: 'weekend_free_dates',
+        type: 'weekend_department_selection',
         data: {
-          message: '📋 Свободные даты для выходных',
-          description: 'Для показа доступных дат сначала выберите подразделение и должность.',
+          message: '📊 Просмотр свободных дат',
+          description: 'Для просмотра свободных дат необходимо заполнить данные. Начните с заказа выходного дня.',
           buttons: [
             { text: '📅 Заказать выходной', command: '/weekend_book' },
             { text: '⬅️ Назад к меню выходных', command: '/order_weekend' }
@@ -1355,24 +1409,10 @@ class MessengerBot {
     }
 
     // Получаем доступные даты с учетом квот
-    const departments = {
-      'moscow': 'Москва',
-      'spb': 'Санкт-Петербург', 
-      'krasnoyarsk': 'Красноярск',
-      'sochi': 'Сочи'
-    };
-
-    const positions = {
-      'bp': 'BP',
-      'bp_bs': 'BP BS',
-      'sbe': 'SBE',
-      'ipb': 'IPB'
-    };
-
-    const location = departments[user.weekendOrder.department];
-    const position = positions[user.weekendOrder.position];
+    const location = this.departmentsMapping[user.weekendOrder.department];
+    const position = this.positionsMapping[user.weekendOrder.position];
     
-    const availableDates = this.quotaManager.getAvailableDates(location, position);
+    const availableDates = this.weekendQuotaManager.getAvailableDates(location, position);
     
     // Форматируем даты для отображения
     const formattedDates = availableDates.map(date => ({
@@ -1394,6 +1434,7 @@ class MessengerBot {
         freeDates: formattedDates.slice(0, 10), // Показываем только первые 10 дат
         buttons: [
           { text: '📅 Заказать выходной', command: '/weekend_book' },
+          { text: '🔄 Изменить фильтры', command: '/weekend_free_dates' },
           { text: '⬅️ Назад к меню выходных', command: '/order_weekend' }
         ]
       }
@@ -1464,27 +1505,13 @@ class MessengerBot {
 
       // Освобождаем квоты для каждой даты
       if (order.selectedDates && order.selectedDates.length > 0) {
-        const departments = {
-          'moscow': 'Москва',
-          'spb': 'Санкт-Петербург', 
-          'krasnoyarsk': 'Красноярск',
-          'sochi': 'Сочи'
-        };
-
-        const positions = {
-          'bp': 'BP',
-          'bp_bs': 'BP BS',
-          'sbe': 'SBE',
-          'ipb': 'IPB'
-        };
-
-        const location = departments[order.department];
-        const position = positions[order.position];
+        const location = this.departmentsMapping[order.department];
+        const position = this.positionsMapping[order.position];
 
         if (location && position) {
           for (const dateStr of order.selectedDates) {
             const date = new Date(dateStr);
-            this.quotaManager.cancelBooking(date, location, position);
+            this.weekendQuotaManager.cancelBooking(date, location, position);
           }
         }
       }
@@ -1523,7 +1550,7 @@ class MessengerBot {
   }
 
   // Вспомогательные функции для работы с выходными
-  generateWeekendCalendar(date) {
+  generateWeekendCalendar(date, location = null, position = null) {
     const year = date.getFullYear();
     const month = date.getMonth();
     const monthNames = [
@@ -1568,12 +1595,20 @@ class MessengerBot {
       const isWeekend = dayDate.getDay() === 0 || dayDate.getDay() === 6; // Суббота или воскресенье
       const isPast = dayDate < new Date();
       
+      // Определяем доступность даты с учетом квот
+      let available = !isPast;
+      
+      if (location && position && !isPast) {
+        const quota = this.weekendQuotaManager.getQuotaForDate(dayDate, location, position);
+        available = quota.available > 0;
+      }
+      
       calendar.days.push({
         day: day,
         date: dayDate.toISOString().split('T')[0],
         isWeekend: isWeekend,
         isPast: isPast,
-        available: !isPast // Разрешаем выбор любой даты, кроме прошедших
+        available: available
       });
     }
 
@@ -1730,12 +1765,7 @@ class MessengerBot {
     const user = this.getOrCreateUser(userId);
     const departmentId = args[0];
     
-    const departments = {
-      'moscow': { name: 'Москва', icon: '🏛️' },
-      'spb': { name: 'Санкт-Петербург', icon: '🏛️' },
-      'krasnoyarsk': { name: 'Красноярск', icon: '🏔️' },
-      'sochi': { name: 'Сочи', icon: '🌴' }
-    };
+    const departments = this.departments;
 
     const department = departments[departmentId];
     if (!department) {
@@ -1750,7 +1780,8 @@ class MessengerBot {
       };
     }
 
-    user.weekendOrder.department = departmentId;
+    user.weekendOrder.location = departmentId; // Сохраняем как location (подразделение)
+    user.weekendOrder.department = departmentId; // Также сохраняем как department для совместимости
     user.state = 'weekend_position_selection';
 
     return {
@@ -1775,12 +1806,7 @@ class MessengerBot {
     const user = this.getOrCreateUser(userId);
     const positionId = args[0];
     
-    const positions = {
-      'bp': { name: 'БП' },
-      'bp_bs': { name: 'БП BS' },
-      'sbe': { name: 'СБЭ' },
-      'ipb': { name: 'ИПБ' }
-    };
+    const positions = this.positions;
 
     const position = positions[positionId];
     if (!position) {
@@ -1796,24 +1822,20 @@ class MessengerBot {
     }
 
     user.weekendOrder.position = positionId;
-    user.state = 'weekend_date_selection';
+    user.state = 'weekend_fullname_input';
 
-    const departments = {
-      'moscow': { name: 'Москва', icon: '🏛️' },
-      'spb': { name: 'Санкт-Петербург', icon: '🏛️' },
-      'krasnoyarsk': { name: 'Красноярск', icon: '🏔️' },
-      'sochi': { name: 'Сочи', icon: '🌴' }
-    };
-
+    const departments = this.departments;
     const department = departments[user.weekendOrder.department];
 
     return {
-      type: 'weekend_date_selection',
+      type: 'weekend_fullname_input',
       data: {
         message: `✅ Выбрана должность: ${position.name}`,
-        description: `Подразделение: ${department.icon} ${department.name}\nДолжность: ${position.name}\n\nВыберите даты для выходных (можно выбрать 1 или 2 даты):`,
-        calendar: this.generateWeekendCalendar(new Date()),
-        selectedDates: user.weekendOrder.selectedDates || [],
+        description: `Подразделение: ${department.icon} ${department.name}\nДолжность: ${position.name}\n\nВведите ваше ФИО (полностью):`,
+        formatBlock: {
+          fields: ['ФИО'],
+          example: ['Соколянский Александр Владимирович']
+        },
         buttons: [
           { text: '⬅️ Назад к выбору должности', command: '/weekend_book' }
         ]
@@ -1838,22 +1860,12 @@ class MessengerBot {
 
     user.state = 'weekend_confirmation';
 
-    const departments = {
-      'moscow': { name: 'Москва', icon: '🏛️' },
-      'spb': { name: 'Санкт-Петербург', icon: '🏛️' },
-      'krasnoyarsk': { name: 'Красноярск', icon: '🏔️' },
-      'sochi': { name: 'Сочи', icon: '🌴' }
-    };
+    const departments = this.departments;
 
-    const positions = {
-      'bp': { name: 'БП' },
-      'bp_bs': { name: 'БП BS' },
-      'sbe': { name: 'СБЭ' },
-      'ipb': { name: 'ИПБ' }
-    };
+    const positions = this.positions;
 
     const department = departments[user.weekendOrder.department];
-    const position = positions[user.weekendOrder.position];
+    const positionInfo = positions[user.weekendOrder.position];
 
     const selectedDatesText = user.weekendOrder.selectedDates.map(date => {
       const d = new Date(date);
@@ -1871,7 +1883,7 @@ class MessengerBot {
         message: '✨ Пожалуйста, проверьте вашу заявку на выходные:',
         summary: {
           department: `${department.icon} ${department.name}`,
-          position: position.name,
+          position: positionInfo.name,
           dates: selectedDatesText,
           count: user.weekendOrder.selectedDates.length
         },
@@ -1893,28 +1905,14 @@ class MessengerBot {
     
     try {
       // Проверяем квоты для каждой выбранной даты
-      const departments = {
-        'moscow': 'Москва',
-        'spb': 'Санкт-Петербург', 
-        'krasnoyarsk': 'Красноярск',
-        'sochi': 'Сочи'
-      };
-
-      const positions = {
-        'bp': 'BP',
-        'bp_bs': 'BP BS',
-        'sbe': 'SBE',
-        'ipb': 'IPB'
-      };
-
-      const location = departments[user.weekendOrder.department];
-      const position = positions[user.weekendOrder.position];
+      const location = this.departmentsMapping[user.weekendOrder.department];
+      const position = this.positionsMapping[user.weekendOrder.position];
       
       // Проверяем доступность каждой даты
       const unavailableDates = [];
       for (const dateStr of user.weekendOrder.selectedDates) {
         const date = new Date(dateStr);
-        if (!this.quotaManager.isDateAvailable(date, location, position)) {
+        if (!this.weekendQuotaManager.isDateAvailable(date, location, position)) {
           unavailableDates.push(dateStr);
         }
       }
@@ -1992,7 +1990,7 @@ class MessengerBot {
       };
 
       const department = departments[order.department];
-      const position = positions[order.position];
+      const positionInfo = positions[order.position];
 
       const selectedDatesText = order.selectedDates.map(date => {
         const d = new Date(date);
@@ -2007,7 +2005,7 @@ class MessengerBot {
       return {
         type: 'weekend_submitted',
         data: {
-          message: `🎉 Заявка на выходные успешно отправлена!\n\n📋 Детали заказа:\n• ID: ${orderId}\n• Подразделение: ${department.icon} ${department.name}\n• Должность: ${position.name}\n• Даты: ${selectedDatesText}\n• Статус: Ожидает подтверждения\n\n⏰ Время обработки: до 24 часов\n📞 Мы свяжемся с вами для подтверждения.`,
+          message: `🎉 Заявка на выходные успешно отправлена!\n\n📋 Детали заказа:\n• ID: ${orderId}\n• Подразделение: ${department.icon} ${department.name}\n• Должность: ${positionInfo.name}\n• Даты: ${selectedDatesText}\n• Статус: Ожидает подтверждения\n\n⏰ Время обработки: до 24 часов\n📞 Мы свяжемся с вами для подтверждения.`,
           orderId: orderId,
           buttons: [
             { text: '📝 Мои заказы', command: '/weekend_booked_dates' },
@@ -2037,22 +2035,12 @@ class MessengerBot {
     const user = this.getOrCreateUser(userId);
     user.state = 'weekend_date_selection';
 
-    const departments = {
-      'moscow': { name: 'Москва', icon: '🏛️' },
-      'spb': { name: 'Санкт-Петербург', icon: '🏛️' },
-      'krasnoyarsk': { name: 'Красноярск', icon: '🏔️' },
-      'sochi': { name: 'Сочи', icon: '🌴' }
-    };
+    const departments = this.departments;
 
-    const positions = {
-      'bp': { name: 'БП' },
-      'bp_bs': { name: 'БП BS' },
-      'sbe': { name: 'СБЭ' },
-      'ipb': { name: 'ИПБ' }
-    };
+    const positions = this.positions;
 
     const department = departments[user.weekendOrder.department];
-    const position = positions[user.weekendOrder.position];
+    const positionInfo = positions[user.weekendOrder.position];
 
     const selectedDatesText = user.weekendOrder.selectedDates ? 
       user.weekendOrder.selectedDates.map(date => {
@@ -2069,8 +2057,8 @@ class MessengerBot {
       type: 'weekend_date_selection',
       data: {
         message: `✅ Продолжаем выбор дат`,
-        description: `Подразделение: ${department.icon} ${department.name}\nДолжность: ${position.name}\n${selectedDatesText ? `Выбранные даты: ${selectedDatesText}\n` : ''}\nВыберите даты для выходных (можно выбрать 1 или 2 даты):`,
-        calendar: this.generateWeekendCalendar(new Date()),
+        description: `Подразделение: ${department.icon} ${department.name}\nДолжность: ${positionInfo.name}\n${selectedDatesText ? `Выбранные даты: ${selectedDatesText}\n` : ''}\nВыберите даты для выходных (можно выбрать 1 или 2 даты):`,
+        calendar: this.generateWeekendCalendar(new Date(), this.departmentsMapping[user.weekendOrder.department], this.positionsMapping[user.weekendOrder.position]),
         selectedDates: user.weekendOrder.selectedDates || [],
         buttons: [
           { text: '⬅️ Назад к выбору должности', command: '/weekend_book' }
@@ -2087,22 +2075,12 @@ class MessengerBot {
     const targetDate = new Date(year, month, 1);
     user.state = 'weekend_date_selection';
 
-    const departments = {
-      'moscow': { name: 'Москва', icon: '🏛️' },
-      'spb': { name: 'Санкт-Петербург', icon: '🏛️' },
-      'krasnoyarsk': { name: 'Красноярск', icon: '🏔️' },
-      'sochi': { name: 'Сочи', icon: '🌴' }
-    };
+    const departments = this.departments;
 
-    const positions = {
-      'bp': { name: 'БП' },
-      'bp_bs': { name: 'БП BS' },
-      'sbe': { name: 'СБЭ' },
-      'ipb': { name: 'ИПБ' }
-    };
+    const positions = this.positions;
 
     const department = departments[user.weekendOrder.department];
-    const position = positions[user.weekendOrder.position];
+    const positionInfo = positions[user.weekendOrder.position];
 
     const selectedDatesText = user.weekendOrder.selectedDates ? 
       user.weekendOrder.selectedDates.map(date => {
@@ -2119,8 +2097,8 @@ class MessengerBot {
       type: 'weekend_date_selection',
       data: {
         message: `✅ Выбор дат`,
-        description: `Подразделение: ${department.icon} ${department.name}\nДолжность: ${position.name}\n${selectedDatesText ? `Выбранные даты: ${selectedDatesText}\n` : ''}\nВыберите даты для выходных (можно выбрать 1 или 2 даты):`,
-        calendar: this.generateWeekendCalendar(targetDate),
+        description: `Подразделение: ${department.icon} ${department.name}\nДолжность: ${positionInfo.name}\n${selectedDatesText ? `Выбранные даты: ${selectedDatesText}\n` : ''}\nВыберите даты для выходных (можно выбрать 1 или 2 даты):`,
+        calendar: this.generateWeekendCalendar(targetDate, this.departmentsMapping[user.weekendOrder.department], this.positionsMapping[user.weekendOrder.position]),
         selectedDates: user.weekendOrder.selectedDates || [],
         buttons: [
           { text: '⬅️ Назад к выбору должности', command: '/weekend_book' }
@@ -2137,22 +2115,12 @@ class MessengerBot {
     const targetDate = new Date(year, month, 1);
     user.state = 'weekend_date_selection';
 
-    const departments = {
-      'moscow': { name: 'Москва', icon: '🏛️' },
-      'spb': { name: 'Санкт-Петербург', icon: '🏛️' },
-      'krasnoyarsk': { name: 'Красноярск', icon: '🏔️' },
-      'sochi': { name: 'Сочи', icon: '🌴' }
-    };
+    const departments = this.departments;
 
-    const positions = {
-      'bp': { name: 'БП' },
-      'bp_bs': { name: 'БП BS' },
-      'sbe': { name: 'СБЭ' },
-      'ipb': { name: 'ИПБ' }
-    };
+    const positions = this.positions;
 
     const department = departments[user.weekendOrder.department];
-    const position = positions[user.weekendOrder.position];
+    const positionInfo = positions[user.weekendOrder.position];
 
     const selectedDatesText = user.weekendOrder.selectedDates ? 
       user.weekendOrder.selectedDates.map(date => {
@@ -2169,11 +2137,137 @@ class MessengerBot {
       type: 'weekend_date_selection',
       data: {
         message: `✅ Выбор дат`,
-        description: `Подразделение: ${department.icon} ${department.name}\nДолжность: ${position.name}\n${selectedDatesText ? `Выбранные даты: ${selectedDatesText}\n` : ''}\nВыберите даты для выходных (можно выбрать 1 или 2 даты):`,
-        calendar: this.generateWeekendCalendar(targetDate),
+        description: `Подразделение: ${department.icon} ${department.name}\nДолжность: ${positionInfo.name}\n${selectedDatesText ? `Выбранные даты: ${selectedDatesText}\n` : ''}\nВыберите даты для выходных (можно выбрать 1 или 2 даты):`,
+        calendar: this.generateWeekendCalendar(targetDate, this.departmentsMapping[user.weekendOrder.department], this.positionsMapping[user.weekendOrder.position]),
         selectedDates: user.weekendOrder.selectedDates || [],
         buttons: [
           { text: '⬅️ Назад к выбору должности', command: '/weekend_book' }
+        ]
+      }
+    };
+  }
+
+  // Функция для показа статистики квот
+  handleWeekendQuotaStats(userId, args) {
+    const user = this.getOrCreateUser(userId);
+    
+    // Проверяем, заполнены ли данные пользователя
+    if (!user.weekendOrder || !user.weekendOrder.isComplete) {
+      return {
+        type: 'weekend_department_selection',
+        data: {
+          message: '📊 Статистика квот',
+          description: 'Для просмотра статистики квот необходимо заполнить данные. Начните с заказа выходного дня.',
+          buttons: [
+            { text: '📅 Заказать выходной', command: '/weekend_book' },
+            { text: '⬅️ Назад к меню выходных', command: '/order_weekend' }
+          ]
+        }
+      };
+    }
+
+    // Получаем статистику квот
+    const location = this.departmentsMapping[user.weekendOrder.department];
+    const position = this.positionsMapping[user.weekendOrder.position];
+    
+    const stats = this.weekendQuotaManager.getQuotaStats(location);
+    const positionStats = stats[location] && stats[location][position];
+    
+    let message = `📊 Статистика квот\n📍 ${location} | 👤 ${position}`;
+    let description = '';
+    
+    if (positionStats) {
+      description = `📋 Дневная квота: ${positionStats.dailyQuota} мест\n📅 Использовано: ${positionStats.totalUsed} мест\n✅ Доступно: ${positionStats.totalAvailable} мест`;
+    } else {
+      description = '❌ Статистика недоступна для выбранного подразделения и должности';
+    }
+
+    return {
+      type: 'weekend_quota_stats',
+      data: {
+        message: message,
+        description: description,
+        buttons: [
+          { text: '🔄 Изменить фильтры', command: '/weekend_quota_stats' },
+          { text: '📅 Заказать выходной', command: '/weekend_book' },
+          { text: '⬅️ Назад к меню выходных', command: '/order_weekend' }
+        ]
+      }
+    };
+  }
+
+  // Обработчик ввода ФИО для заказа выходных
+  handleWeekendFullnameInput(userId, args) {
+    const user = this.getOrCreateUser(userId);
+    const fullName = args.join(' ').trim();
+    
+    if (!fullName || fullName.length < 3) {
+      return {
+        type: 'invalid_name',
+        data: {
+          message: '❌ Пожалуйста, введите ваше ФИО полностью (минимум 3 символа).',
+          buttons: [
+            { text: '⬅️ Назад к выбору должности', command: '/weekend_book' }
+          ]
+        }
+      };
+    }
+
+    user.weekendOrder.fullName = fullName;
+    user.state = 'weekend_employee_id_input';
+
+    return {
+      type: 'weekend_employee_id_input',
+      data: {
+        message: `✅ ФИО: ${fullName}`,
+        description: 'Введите ваш табельный номер:',
+        formatBlock: {
+          fields: ['Табельный номер'],
+          example: ['119356']
+        },
+        buttons: [
+          { text: '⬅️ Назад к вводу ФИО', command: '/weekend_book' }
+        ]
+      }
+    };
+  }
+
+  // Обработчик ввода табельного номера для заказа выходных
+  handleWeekendEmployeeIdInput(userId, args) {
+    const user = this.getOrCreateUser(userId);
+    const employeeId = args[0].trim();
+    
+    if (!employeeId || employeeId.length < 3) {
+      return {
+        type: 'invalid_employee_id',
+        data: {
+          message: '❌ Пожалуйста, введите корректный табельный номер (минимум 3 символа).',
+          buttons: [
+            { text: '⬅️ Назад к вводу ФИО', command: '/weekend_book' }
+          ]
+        }
+      };
+    }
+
+    user.weekendOrder.employeeId = employeeId;
+    user.weekendOrder.isComplete = true; // Отмечаем, что данные заполнены
+    user.state = 'weekend_date_selection';
+
+    // Получаем информацию о выбранных параметрах для отображения
+    const departments = this.departments;
+    const positions = this.positions;
+    const department = departments[user.weekendOrder.department];
+    const position = positions[user.weekendOrder.position];
+
+    return {
+      type: 'weekend_date_selection',
+      data: {
+        message: `✅ Данные заполнены!`,
+        description: `Подразделение: ${department.icon} ${department.name}\nДолжность: ${position.name}\nФИО: ${user.weekendOrder.fullName}\nТабельный номер: ${employeeId}\n\nВыберите даты для выходных (можно выбрать 1 или 2 даты):`,
+        calendar: this.generateWeekendCalendar(new Date(), this.departmentsMapping[user.weekendOrder.department], this.positionsMapping[user.weekendOrder.position]),
+        selectedDates: user.weekendOrder.selectedDates || [],
+        buttons: [
+          { text: '⬅️ Изменить данные', command: '/weekend_book' }
         ]
       }
     };

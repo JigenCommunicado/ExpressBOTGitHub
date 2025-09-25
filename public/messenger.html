@@ -370,6 +370,9 @@
             cursor: default;
         }
 
+
+
+
         /* Стили для списков выходных */
         .weekend-list, .free-dates-list, .booked-dates-list {
             margin: 15px 0;
@@ -1066,6 +1069,14 @@
                 contentDiv.innerHTML = formatWeekendConfirmation(response.data);
             } else if (response.type === 'weekend_submitted') {
                 contentDiv.innerHTML = formatWeekendSubmitted(response.data);
+            } else if (response.type === 'weekend_quota_stats') {
+                contentDiv.innerHTML = formatWeekendQuotaStats(response.data);
+            } else if (response.type === 'weekend_location_selection') {
+                contentDiv.innerHTML = formatWeekendDepartmentSelection(response.data);
+            } else if (response.type === 'weekend_fullname_input') {
+                contentDiv.innerHTML = formatWeekendFullnameInput(response.data);
+            } else if (response.type === 'weekend_employee_id_input') {
+                contentDiv.innerHTML = formatWeekendEmployeeIdInput(response.data);
             } else if (response.type === 'max_dates_selected') {
                 contentDiv.innerHTML = formatSimpleMessage(response.data);
             } else if (response.type === 'date_already_selected') {
@@ -1946,10 +1957,12 @@
                     if (day.empty) {
                         html += '<div class="calendar-day empty"></div>';
                     } else {
-                        const dayClass = day.available ? 'available' : (day.isPast ? 'past' : 'unavailable');
+                        // Определяем классы для стилизации
+                        let dayClass = day.available ? 'available' : (day.isPast ? 'past' : 'unavailable');
                         const clickHandler = day.available ? `onclick="selectWeekendDate('${day.date}')"` : '';
                         const isSelected = data.selectedDates && data.selectedDates.includes(day.date);
                         const selectedClass = isSelected ? 'selected' : '';
+                        
                         html += `<div class="calendar-day ${dayClass} ${selectedClass}" ${clickHandler}>${day.day}</div>`;
                     }
                 });
@@ -2039,6 +2052,100 @@
 
         function formatWeekendSubmitted(data) {
             let html = `<div class="message-title">${data.message.replace(/\n/g, '<br>')}</div>`;
+            
+            if (data.buttons && Array.isArray(data.buttons)) {
+                html += '<div class="buttons">';
+                data.buttons.forEach(button => {
+                    html += `<button class="button" onclick="sendMessage('${button.command}')">${button.text}</button>`;
+                });
+                html += '</div>';
+            }
+            
+            return html;
+        }
+
+        function formatWeekendQuotaStats(data) {
+            let html = `<div class="message-title">${data.message.replace(/\n/g, '<br>')}</div>`;
+            
+            if (data.description) {
+                html += `<div class="message-text">${data.description.replace(/\n/g, '<br>')}</div>`;
+            }
+            
+            if (data.buttons && Array.isArray(data.buttons)) {
+                html += '<div class="buttons">';
+                data.buttons.forEach(button => {
+                    html += `<button class="button" onclick="sendMessage('${button.command}')">${button.text}</button>`;
+                });
+                html += '</div>';
+            }
+            
+            return html;
+        }
+
+        function formatWeekendFullnameInput(data) {
+            let html = `<div class="message-title">${data.message}</div>`;
+            if (data.description) {
+                html += `<div class="message-text">${data.description}</div>`;
+            }
+            
+            if (data.formatBlock) {
+                html += '<div class="format-block">';
+                html += '<button class="copy-button" onclick="copyToClipboard(\'ФИО\')">копировать</button>';
+                html += '<div class="format-fields">';
+                data.formatBlock.fields.forEach(field => {
+                    html += field + '<br>';
+                });
+                html += '</div>';
+                html += '</div>';
+                
+                html += '<div class="message-text">Например:</div>';
+                html += '<div class="format-example">';
+                html += '<button class="copy-button" onclick="copyToClipboard(\'Соколянский Александр Владимирович\')">копировать</button>';
+                html += '<div class="example-text">';
+                data.formatBlock.example.forEach(example => {
+                    html += example + '<br>';
+                });
+                html += '</div>';
+                html += '</div>';
+            }
+            
+            if (data.buttons && Array.isArray(data.buttons)) {
+                html += '<div class="buttons">';
+                data.buttons.forEach(button => {
+                    html += `<button class="button" onclick="sendMessage('${button.command}')">${button.text}</button>`;
+                });
+                html += '</div>';
+            }
+            
+            return html;
+        }
+
+        function formatWeekendEmployeeIdInput(data) {
+            let html = `<div class="message-title">${data.message}</div>`;
+            if (data.description) {
+                html += `<div class="message-text">${data.description}</div>`;
+            }
+            
+            if (data.formatBlock) {
+                html += '<div class="format-block">';
+                html += '<button class="copy-button" onclick="copyToClipboard(\'Табельный номер\')">копировать</button>';
+                html += '<div class="format-fields">';
+                data.formatBlock.fields.forEach(field => {
+                    html += field + '<br>';
+                });
+                html += '</div>';
+                html += '</div>';
+                
+                html += '<div class="message-text">Например:</div>';
+                html += '<div class="format-example">';
+                html += '<button class="copy-button" onclick="copyToClipboard(\'119356\')">копировать</button>';
+                html += '<div class="example-text">';
+                data.formatBlock.example.forEach(example => {
+                    html += example + '<br>';
+                });
+                html += '</div>';
+                html += '</div>';
+            }
             
             if (data.buttons && Array.isArray(data.buttons)) {
                 html += '<div class="buttons">';

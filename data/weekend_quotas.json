@@ -1,0 +1,148 @@
+{
+  "Москва": {
+    "BP": 0,
+    "BP BS": 0,
+    "SBE": 0,
+    "IPB": 0,
+    "dates": {
+      "2025-09-26": {
+        "SBE": {
+          "total": 2,
+          "used": 0,
+          "available": 2
+        },
+        "BP BS": {
+          "total": 20,
+          "used": 0,
+          "available": 20
+        }
+      },
+      "2025-09-27": {
+        "SBE": {
+          "total": 2,
+          "used": 0,
+          "available": 2
+        },
+        "BP BS": {
+          "total": 20,
+          "used": 0,
+          "available": 20
+        }
+      },
+      "2025-10-03": {
+        "SBE": {
+          "total": 2,
+          "used": 0,
+          "available": 2
+        },
+        "BP BS": {
+          "total": 20,
+          "used": 0,
+          "available": 20
+        }
+      },
+      "2025-10-04": {
+        "SBE": {
+          "total": 2,
+          "used": 0,
+          "available": 2
+        },
+        "BP BS": {
+          "total": 20,
+          "used": 0,
+          "available": 20
+        }
+      },
+      "2025-10-10": {
+        "SBE": {
+          "total": 2,
+          "used": 0,
+          "available": 2
+        },
+        "BP BS": {
+          "total": 20,
+          "used": 0,
+          "available": 20
+        }
+      },
+      "2025-10-11": {
+        "SBE": {
+          "total": 2,
+          "used": 0,
+          "available": 2
+        },
+        "BP BS": {
+          "total": 20,
+          "used": 0,
+          "available": 20
+        }
+      },
+      "2025-10-17": {
+        "SBE": {
+          "total": 2,
+          "used": 0,
+          "available": 2
+        },
+        "BP BS": {
+          "total": 20,
+          "used": 0,
+          "available": 20
+        }
+      },
+      "2025-10-18": {
+        "SBE": {
+          "total": 2,
+          "used": 0,
+          "available": 2
+        },
+        "BP BS": {
+          "total": 20,
+          "used": 0,
+          "available": 20
+        }
+      },
+      "2025-10-24": {
+        "SBE": {
+          "total": 2,
+          "used": 0,
+          "available": 2
+        },
+        "BP BS": {
+          "total": 20,
+          "used": 0,
+          "available": 20
+        }
+      },
+      "2025-10-25": {
+        "SBE": {
+          "total": 2,
+          "used": 0,
+          "available": 2
+        },
+        "BP BS": {
+          "total": 20,
+          "used": 0,
+          "available": 20
+        }
+      }
+    }
+  },
+  "Санкт-Петербург": {
+    "BP": 3,
+    "BP BS": 2,
+    "SBE": 1,
+    "IPB": 1
+  },
+  "Красноярск": {
+    "BP": 2,
+    "BP BS": 1,
+    "SBE": 1,
+    "IPB": 1
+  },
+  "Сочи": {
+    "BP": 2,
+    "BP BS": 1,
+    "SBE": 1,
+    "IPB": 1
+  }
+}
