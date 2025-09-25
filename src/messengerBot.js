@@ -97,6 +97,27 @@ class MessengerBot {
       description: 'Заказ аэроэкспресса',
       handler: this.handleOrderAeroexpress.bind(this)
     });
+
+    // Команды для управления выходными
+    this.commands.set('weekend_book', {
+      description: 'Заказать выходной день',
+      handler: this.handleWeekendBook.bind(this)
+    });
+
+    this.commands.set('weekend_cancel', {
+      description: 'Отменить выходной день',
+      handler: this.handleWeekendCancel.bind(this)
+    });
+
+    this.commands.set('weekend_free_dates', {
+      description: 'Показать свободные даты',
+      handler: this.handleWeekendFreeDates.bind(this)
+    });
+
+    this.commands.set('weekend_booked_dates', {
+      description: 'Показать заказанные даты',
+      handler: this.handleWeekendBookedDates.bind(this)
+    });
   }
 
   async processMessage(userId, message) {
@@ -1138,24 +1159,19 @@ class MessengerBot {
   // Обработчики новых услуг
   handleOrderWeekend(userId, args) {
     const user = this.getOrCreateUser(userId);
-    user.state = 'ordering_weekend';
+    user.state = 'weekend_menu';
     
     return {
-      type: 'weekend_order_form',
+      type: 'weekend_menu',
       data: {
-        message: '🏖️ Заказ выходных',
-        form: {
-          fields: [
-            { name: 'start_date', label: 'Дата начала выходных', type: 'date', required: true },
-            { name: 'end_date', label: 'Дата окончания выходных', type: 'date', required: true },
-            { name: 'reason', label: 'Причина заказа выходных', type: 'text', required: true },
-            { name: 'contact', label: 'Контактный телефон', type: 'text', required: true },
-            { name: 'notes', label: 'Дополнительные пожелания', type: 'textarea', required: false }
-          ]
-        },
+        message: '🏖️ Управление выходными днями',
+        description: 'Выберите действие:',
         buttons: [
-          { text: 'Отправить заявку', action: 'submit_weekend_order' },
-          { text: 'Отмена', command: '/start' }
+          { text: '📅 Заказать выходной', command: '/weekend_book' },
+          { text: '❌ Отменить выходной', command: '/weekend_cancel' },
+          { text: '📋 Свободные даты', command: '/weekend_free_dates' },
+          { text: '📝 Заказанные даты', command: '/weekend_booked_dates' },
+          { text: '⬅️ Назад в главное меню', command: '/start' }
         ]
       }
     };
@@ -1213,6 +1229,180 @@ class MessengerBot {
         ]
       }
     };
+  }
+
+  // Обработчики для управления выходными днями
+  handleWeekendBook(userId, args) {
+    const user = this.getOrCreateUser(userId);
+    user.state = 'booking_weekend';
+    
+    return {
+      type: 'weekend_booking_form',
+      data: {
+        message: '📅 Заказ выходного дня',
+        description: 'Выберите дату для выходного дня:',
+        calendar: this.generateWeekendCalendar(new Date()),
+        buttons: [
+          { text: '⬅️ Назад к меню выходных', command: '/order_weekend' },
+          { text: '🏠 Главное меню', command: '/start' }
+        ]
+      }
+    };
+  }
+
+  handleWeekendCancel(userId, args) {
+    const user = this.getOrCreateUser(userId);
+    
+    // Получаем заказанные выходные пользователя
+    const userWeekends = this.getUserWeekends(userId);
+    
+    if (userWeekends.length === 0) {
+      return {
+        type: 'no_weekends',
+        data: {
+          message: '📭 У вас нет заказанных выходных дней.',
+          buttons: [
+            { text: '📅 Заказать выходной', command: '/weekend_book' },
+            { text: '⬅️ Назад к меню выходных', command: '/order_weekend' }
+          ]
+        }
+      };
+    }
+
+    return {
+      type: 'weekend_cancel_list',
+      data: {
+        message: '❌ Отмена выходного дня',
+        description: 'Выберите выходной день для отмены:',
+        weekends: userWeekends,
+        buttons: [
+          { text: '⬅️ Назад к меню выходных', command: '/order_weekend' }
+        ]
+      }
+    };
+  }
+
+  handleWeekendFreeDates(userId, args) {
+    const freeDates = this.getFreeWeekendDates();
+    
+    return {
+      type: 'weekend_free_dates',
+      data: {
+        message: '📋 Свободные даты для выходных',
+        description: 'Доступные даты для заказа выходных:',
+        freeDates: freeDates,
+        buttons: [
+          { text: '📅 Заказать выходной', command: '/weekend_book' },
+          { text: '⬅️ Назад к меню выходных', command: '/order_weekend' }
+        ]
+      }
+    };
+  }
+
+  handleWeekendBookedDates(userId, args) {
+    const user = this.getOrCreateUser(userId);
+    const userWeekends = this.getUserWeekends(userId);
+    
+    if (userWeekends.length === 0) {
+      return {
+        type: 'no_weekends',
+        data: {
+          message: '📭 У вас нет заказанных выходных дней.',
+          buttons: [
+            { text: '📅 Заказать выходной', command: '/weekend_book' },
+            { text: '⬅️ Назад к меню выходных', command: '/order_weekend' }
+          ]
+        }
+      };
+    }
+
+    return {
+      type: 'weekend_booked_dates',
+      data: {
+        message: '📝 Ваши заказанные выходные дни',
+        description: 'Список ваших выходных дней:',
+        weekends: userWeekends,
+        buttons: [
+          { text: '❌ Отменить выходной', command: '/weekend_cancel' },
+          { text: '📅 Заказать еще', command: '/weekend_book' },
+          { text: '⬅️ Назад к меню выходных', command: '/order_weekend' }
+        ]
+      }
+    };
+  }
+
+  // Вспомогательные функции для работы с выходными
+  generateWeekendCalendar(date) {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const monthNames = [
+      'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+      'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+    ];
+
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = (firstDay.getDay() + 6) % 7; // Понедельник = 0
+
+    const calendar = {
+      month: monthNames[month],
+      year: year,
+      daysOfWeek: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
+      days: []
+    };
+
+    // Добавляем пустые ячейки для начала месяца
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      calendar.days.push({ day: '', empty: true });
+    }
+
+    // Добавляем дни месяца
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dayDate = new Date(year, month, day);
+      const isWeekend = dayDate.getDay() === 0 || dayDate.getDay() === 6; // Суббота или воскресенье
+      const isPast = dayDate < new Date();
+      
+      calendar.days.push({
+        day: day,
+        date: dayDate.toISOString().split('T')[0],
+        isWeekend: isWeekend,
+        isPast: isPast,
+        available: !isPast && isWeekend
+      });
+    }
+
+    return calendar;
+  }
+
+  getUserWeekends(userId) {
+    // Пока возвращаем пустой массив, позже будем получать из базы данных
+    return [];
+  }
+
+  getFreeWeekendDates() {
+    // Пока возвращаем тестовые данные, позже будем получать из базы данных
+    const today = new Date();
+    const freeDates = [];
+    
+    for (let i = 1; i <= 30; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      
+      if (date.getDay() === 0 || date.getDay() === 6) { // Суббота или воскресенье
+        freeDates.push({
+          date: date.toISOString().split('T')[0],
+          formatted: date.toLocaleDateString('ru-RU', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+            weekday: 'long'
+          })
+        });
+      }
+    }
+    
+    return freeDates.slice(0, 10); // Возвращаем только первые 10 дат
   }
 }
 

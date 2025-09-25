@@ -275,6 +275,122 @@
             box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
         }
 
+        /* Стили для календаря выходных */
+        .weekend-calendar {
+            margin: 15px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .calendar-header {
+            background: #667eea;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .calendar-days-of-week {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            background: #f5f5f5;
+        }
+
+        .calendar-day-header {
+            padding: 8px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: bold;
+            color: #666;
+        }
+
+        .calendar-days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+        }
+
+        .calendar-day {
+            padding: 8px;
+            text-align: center;
+            cursor: pointer;
+            border: 1px solid #eee;
+            min-height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .calendar-day.empty {
+            background: #f9f9f9;
+            cursor: default;
+        }
+
+        .calendar-day.available {
+            background: #e8f5e8;
+            color: #2d5a2d;
+        }
+
+        .calendar-day.available:hover {
+            background: #d4edda;
+        }
+
+        .calendar-day.past {
+            background: #f8f9fa;
+            color: #6c757d;
+            cursor: default;
+        }
+
+        .calendar-day.unavailable {
+            background: #fff3cd;
+            color: #856404;
+            cursor: default;
+        }
+
+        /* Стили для списков выходных */
+        .weekend-list, .free-dates-list, .booked-dates-list {
+            margin: 15px 0;
+        }
+
+        .weekend-item, .free-date-item, .booked-date-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+
+        .date-info {
+            flex: 1;
+        }
+
+        .date-formatted {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .date-raw {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .date-status {
+            font-size: 12px;
+            color: #28a745;
+        }
+
+        .weekend-actions {
+            margin-left: 10px;
+        }
+
+        .button.small {
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+
         .location-button {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -813,6 +929,18 @@
                 contentDiv.innerHTML = formatHotelOrderForm(response.data);
             } else if (response.type === 'aeroexpress_order_form') {
                 contentDiv.innerHTML = formatAeroexpressOrderForm(response.data);
+            } else if (response.type === 'weekend_menu') {
+                contentDiv.innerHTML = formatWeekendMenu(response.data);
+            } else if (response.type === 'weekend_booking_form') {
+                contentDiv.innerHTML = formatWeekendBookingForm(response.data);
+            } else if (response.type === 'weekend_cancel_list') {
+                contentDiv.innerHTML = formatWeekendCancelList(response.data);
+            } else if (response.type === 'weekend_free_dates') {
+                contentDiv.innerHTML = formatWeekendFreeDates(response.data);
+            } else if (response.type === 'weekend_booked_dates') {
+                contentDiv.innerHTML = formatWeekendBookedDates(response.data);
+            } else if (response.type === 'no_weekends') {
+                contentDiv.innerHTML = formatSimpleMessage(response.data);
             } else {
                 contentDiv.innerHTML = formatSimpleMessage(response.data);
             }
@@ -1442,6 +1570,167 @@
         // Функция для выбора услуги
         function selectService(serviceId) {
             sendMessage(`/${serviceId}`);
+        }
+
+        // Функции для управления выходными днями
+        function formatWeekendMenu(data) {
+            let html = `<div class="message-title">${data.message}</div>`;
+            if (data.description) {
+                html += `<div class="message-text">${data.description}</div>`;
+            }
+            
+            if (data.buttons && Array.isArray(data.buttons)) {
+                html += '<div class="buttons">';
+                data.buttons.forEach(button => {
+                    html += `<button class="button" onclick="sendMessage('${button.command}')">${button.text}</button>`;
+                });
+                html += '</div>';
+            }
+            
+            return html;
+        }
+
+        function formatWeekendBookingForm(data) {
+            let html = `<div class="message-title">${data.message}</div>`;
+            if (data.description) {
+                html += `<div class="message-text">${data.description}</div>`;
+            }
+            
+            if (data.calendar) {
+                html += '<div class="weekend-calendar">';
+                html += `<div class="calendar-header">${data.calendar.month} ${data.calendar.year}</div>`;
+                html += '<div class="calendar-days-of-week">';
+                data.calendar.daysOfWeek.forEach(day => {
+                    html += `<div class="calendar-day-header">${day}</div>`;
+                });
+                html += '</div>';
+                html += '<div class="calendar-days">';
+                data.calendar.days.forEach(day => {
+                    if (day.empty) {
+                        html += '<div class="calendar-day empty"></div>';
+                    } else {
+                        const dayClass = day.available ? 'available' : (day.isPast ? 'past' : 'unavailable');
+                        const clickHandler = day.available ? `onclick="selectWeekendDate('${day.date}')"` : '';
+                        html += `<div class="calendar-day ${dayClass}" ${clickHandler}>${day.day}</div>`;
+                    }
+                });
+                html += '</div>';
+                html += '</div>';
+            }
+            
+            if (data.buttons && Array.isArray(data.buttons)) {
+                html += '<div class="buttons">';
+                data.buttons.forEach(button => {
+                    html += `<button class="button" onclick="sendMessage('${button.command}')">${button.text}</button>`;
+                });
+                html += '</div>';
+            }
+            
+            return html;
+        }
+
+        function formatWeekendCancelList(data) {
+            let html = `<div class="message-title">${data.message}</div>`;
+            if (data.description) {
+                html += `<div class="message-text">${data.description}</div>`;
+            }
+            
+            if (data.weekends && data.weekends.length > 0) {
+                html += '<div class="weekend-list">';
+                data.weekends.forEach((weekend, index) => {
+                    html += `<div class="weekend-item">
+                        <div class="weekend-date">${weekend.date}</div>
+                        <div class="weekend-actions">
+                            <button class="button small" onclick="cancelWeekend('${weekend.id}')">Отменить</button>
+                        </div>
+                    </div>`;
+                });
+                html += '</div>';
+            }
+            
+            if (data.buttons && Array.isArray(data.buttons)) {
+                html += '<div class="buttons">';
+                data.buttons.forEach(button => {
+                    html += `<button class="button" onclick="sendMessage('${button.command}')">${button.text}</button>`;
+                });
+                html += '</div>';
+            }
+            
+            return html;
+        }
+
+        function formatWeekendFreeDates(data) {
+            let html = `<div class="message-title">${data.message}</div>`;
+            if (data.description) {
+                html += `<div class="message-text">${data.description}</div>`;
+            }
+            
+            if (data.freeDates && data.freeDates.length > 0) {
+                html += '<div class="free-dates-list">';
+                data.freeDates.forEach(date => {
+                    html += `<div class="free-date-item">
+                        <div class="date-info">
+                            <div class="date-formatted">${date.formatted}</div>
+                            <div class="date-raw">${date.date}</div>
+                        </div>
+                        <button class="button small" onclick="bookWeekendDate('${date.date}')">Заказать</button>
+                    </div>`;
+                });
+                html += '</div>';
+            }
+            
+            if (data.buttons && Array.isArray(data.buttons)) {
+                html += '<div class="buttons">';
+                data.buttons.forEach(button => {
+                    html += `<button class="button" onclick="sendMessage('${button.command}')">${button.text}</button>`;
+                });
+                html += '</div>';
+            }
+            
+            return html;
+        }
+
+        function formatWeekendBookedDates(data) {
+            let html = `<div class="message-title">${data.message}</div>`;
+            if (data.description) {
+                html += `<div class="message-text">${data.description}</div>`;
+            }
+            
+            if (data.weekends && data.weekends.length > 0) {
+                html += '<div class="booked-dates-list">';
+                data.weekends.forEach((weekend, index) => {
+                    html += `<div class="booked-date-item">
+                        <div class="date-info">
+                            <div class="date-formatted">${weekend.formatted || weekend.date}</div>
+                            <div class="date-status">${weekend.status || 'Подтвержден'}</div>
+                        </div>
+                    </div>`;
+                });
+                html += '</div>';
+            }
+            
+            if (data.buttons && Array.isArray(data.buttons)) {
+                html += '<div class="buttons">';
+                data.buttons.forEach(button => {
+                    html += `<button class="button" onclick="sendMessage('${button.command}')">${button.text}</button>`;
+                });
+                html += '</div>';
+            }
+            
+            return html;
+        }
+
+        // Функции для работы с выходными
+        function selectWeekendDate(date) {
+            sendMessage(`/weekend_select_date ${date}`);
+        }
+
+        function bookWeekendDate(date) {
+            sendMessage(`/weekend_select_date ${date}`);
+        }
+
+        function cancelWeekend(weekendId) {
+            sendMessage(`/weekend_cancel_confirm ${weekendId}`);
         }
 
         // Инициализация
