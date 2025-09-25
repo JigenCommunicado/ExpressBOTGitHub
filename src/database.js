@@ -68,7 +68,6 @@ class DatabaseManager {
         wishes,
         type,
         selectedDates,
-        status = 'pending',
         created_at,
         updated_at
       } = orderData;
@@ -86,7 +85,6 @@ class DatabaseManager {
         wishes,
         type,
         selectedDates,
-        status,
         created_at: created_at || new Date().toISOString(),
         updated_at: updated_at || new Date().toISOString()
       };
@@ -162,20 +160,34 @@ class DatabaseManager {
       console.log('Получение статистики заказов, всего заказов:', this.orders.length);
       const stats = {
         total: this.orders.length,
-        byStatus: {}
-      };
-      
-      this.orders.forEach(order => {
-        if (!stats.byStatus[order.status]) {
-          stats.byStatus[order.status] = 0;
+        byStatus: {
+          pending: this.orders.length, // Все заказы считаются новыми
+          confirmed: 0 // Пока нет обработанных заказов
         }
-        stats.byStatus[order.status]++;
-      });
+      };
       
       console.log('Статистика заказов:', stats);
       return stats;
     } catch (error) {
       console.error('Ошибка получения статистики заказов:', error.message);
+      throw error;
+    }
+  }
+
+  async deleteOrder(orderId) {
+    try {
+      const initialLength = this.orders.length;
+      this.orders = this.orders.filter(order => order.id !== orderId);
+      const deletedCount = initialLength - this.orders.length;
+      
+      if (deletedCount > 0) {
+        await this.saveOrders();
+        console.log(`Заказ ${orderId} успешно удален из базы данных`);
+      }
+      
+      return { deletedCount };
+    } catch (error) {
+      console.error('Ошибка удаления заказа:', error.message);
       throw error;
     }
   }

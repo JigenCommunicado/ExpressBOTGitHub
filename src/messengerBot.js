@@ -949,9 +949,10 @@ class MessengerBot {
         location: user.selectedLocation,
         department: user.selectedDepartment,
         date: user.selectedDate,
+        flight_date: user.selectedDate, // Дублируем для совместимости
         direction: user.direction,
         wishes: user.wishes,
-        status: 'pending',
+        type: 'flight', // Добавляем тип заказа
         createdAt: new Date()
       };
 
@@ -1812,7 +1813,6 @@ class MessengerBot {
         department: user.weekendOrder.department,
         position: user.weekendOrder.position,
         selectedDates: user.weekendOrder.selectedDates,
-        status: 'pending',
         created_at: new Date(),
         updated_at: new Date()
       };

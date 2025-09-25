@@ -371,6 +371,44 @@ class MessengerBotAPI {
       });
     }
   }
+
+  async deleteOrder(req, res) {
+    try {
+      const { orderId } = req.params;
+
+      if (!orderId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Требуется orderId'
+        });
+      }
+
+      const result = await this.bot.database.deleteOrder(orderId);
+
+      if (result.deletedCount === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'Заказ не найден'
+        });
+      }
+
+      this.logger.info('Order deleted', { orderId, success: true });
+
+      res.json({
+        success: true,
+        message: 'Заказ успешно удален',
+        data: { orderId }
+      });
+
+    } catch (error) {
+      this.logger.error('Error deleting order', { error: error.message, orderId: req.params.orderId });
+      
+      res.status(500).json({
+        success: false,
+        message: 'Ошибка удаления заказа'
+      });
+    }
+  }
 }
 
 module.exports = MessengerBotAPI;

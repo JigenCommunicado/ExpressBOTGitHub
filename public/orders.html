@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ExpressBot - Админ панель заказов</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -111,28 +112,6 @@
             background: #f8f9fa;
         }
 
-        .status-badge {
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .status-pending {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .status-confirmed {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .status-cancelled {
-            background: #f8d7da;
-            color: #721c24;
-        }
 
         .order-type {
             padding: 4px 8px;
@@ -214,6 +193,105 @@
             color: #666;
             margin-top: 2px;
         }
+
+        .action-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+        }
+
+        .action-btn:hover {
+            background: #c82333;
+            transform: translateY(-1px);
+        }
+
+        .action-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 5px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px 20px;
+            text-align: center;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            color: #666;
+            background: transparent;
+            border: none;
+        }
+
+        .tab:hover {
+            background: #e9ecef;
+            color: #333;
+        }
+
+        .tab.active {
+            background: #667eea;
+            color: white;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .orders-count {
+            background: #667eea;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin-left: 8px;
+        }
+
+        .export-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .export-btn:hover {
+            background: #218838;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+
+        .export-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
     </style>
 </head>
 <body>
@@ -229,8 +307,35 @@
 
         <div class="orders-section">
             <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h2 class="section-title">📋 Все заказы</h2>
-                <button class="refresh-btn" onclick="loadData()">🔄 Обновить</button>
+                <h2 class="section-title">📋 Управление заказами</h2>
+                <div style="display: flex; gap: 10px;">
+                    <button class="refresh-btn" onclick="loadData()">🔄 Обновить</button>
+                    <button class="export-btn" onclick="exportToExcel()" id="exportBtn">📊 Выгрузить в Excel</button>
+                </div>
+            </div>
+            
+            <!-- Вкладки для фильтрации -->
+            <div class="tabs">
+                <button class="tab active" onclick="filterOrders('all')">
+                    📋 Все заказы
+                    <span class="orders-count" id="count-all">0</span>
+                </button>
+                <button class="tab" onclick="filterOrders('flight')">
+                    ✈️ Заказ рейса
+                    <span class="orders-count" id="count-flight">0</span>
+                </button>
+                <button class="tab" onclick="filterOrders('weekend')">
+                    📅 Заказ выходных
+                    <span class="orders-count" id="count-weekend">0</span>
+                </button>
+                <button class="tab" onclick="filterOrders('hotel')">
+                    🏨 Заказ гостиницы
+                    <span class="orders-count" id="count-hotel">0</span>
+                </button>
+                <button class="tab" onclick="filterOrders('aeroexpress')">
+                    🚄 Заказ аэроэкспресса
+                    <span class="orders-count" id="count-aeroexpress">0</span>
+                </button>
             </div>
             
             <div id="orders">
@@ -240,6 +345,10 @@
     </div>
 
     <script>
+        // Глобальные переменные для управления заказами
+        let allOrders = [];
+        let currentFilter = 'all';
+
         async function loadStats() {
             try {
                 console.log('Загружаем статистику...');
@@ -268,15 +377,11 @@
                         </div>
                         <div class="stat-card">
                             <div class="stat-number">${stats.byStatus.pending || 0}</div>
-                            <div class="stat-label">В обработке</div>
+                            <div class="stat-label">Новые заявки</div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-number">${stats.byStatus.confirmed || 0}</div>
-                            <div class="stat-label">Подтверждено</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">${stats.byStatus.cancelled || 0}</div>
-                            <div class="stat-label">Отменено</div>
+                            <div class="stat-label">Обработано</div>
                         </div>
                     `;
                 } else {
@@ -316,66 +421,14 @@
                         return;
                     }
                     
-                    if (orders.length === 0) {
-                        document.getElementById('orders').innerHTML = '<div class="no-orders">Заказов пока нет</div>';
-                        return;
-                    }
-
-                    let tableHTML = `
-                        <table class="orders-table">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Тип</th>
-                                    <th>Пользователь</th>
-                                    <th>Детали</th>
-                                    <th>Статус</th>
-                                    <th>Дата создания</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                    `;
-
-                    orders.forEach(order => {
-                        const typeClass = `type-${order.type || 'unknown'}`;
-                        const statusClass = `status-${order.status}`;
-                        
-                        let details = '';
-                        if (order.type === 'weekend') {
-                            details = `
-                                <div><strong>Подразделение:</strong> ${order.department || 'Не указано'}</div>
-                                <div><strong>Должность:</strong> ${order.position || 'Не указано'}</div>
-                                <div><strong>Даты:</strong> ${order.selectedDates ? order.selectedDates.join(', ') : 'Не указаны'}</div>
-                            `;
-                        } else if (order.type === 'flight') {
-                            details = `
-                                <div><strong>Направление:</strong> ${order.direction || 'Не указано'}</div>
-                                <div><strong>Дата рейса:</strong> ${order.flight_date || 'Не указана'}</div>
-                                <div><strong>Пожелания:</strong> ${order.wishes || 'Нет'}</div>
-                            `;
-                        } else {
-                            details = '<div>Детали недоступны</div>';
-                        }
-
-                        const createdDate = new Date(order.created_at || order.createdAt).toLocaleString('ru-RU');
-
-                        tableHTML += `
-                            <tr>
-                                <td><strong>${order.id}</strong></td>
-                                <td><span class="order-type ${typeClass}">${getTypeLabel(order.type)}</span></td>
-                                <td>
-                                    <div class="user-info">${order.full_name || 'Не указано'}</div>
-                                    <div class="employee-id">ID: ${order.employee_id || 'Не указан'}</div>
-                                </td>
-                                <td class="date-info">${details}</td>
-                                <td><span class="status-badge ${statusClass}">${getStatusLabel(order.status)}</span></td>
-                                <td class="date-info">${createdDate}</td>
-                            </tr>
-                        `;
-                    });
-
-                    tableHTML += '</tbody></table>';
-                    document.getElementById('orders').innerHTML = tableHTML;
+                    // Сохраняем все заказы для фильтрации
+                    allOrders = orders;
+                    
+                    // Обновляем счетчики
+                    updateOrderCounts();
+                    
+                    // Отображаем заказы согласно текущему фильтру
+                    displayOrders(getFilteredOrders());
                 } else {
                     document.getElementById('orders').innerHTML = '<div class="error">Ошибка загрузки заказов: ' + (data.message || 'Неизвестная ошибка') + '</div>';
                 }
@@ -395,17 +448,333 @@
             return types[type] || '❓ Неизвестно';
         }
 
-        function getStatusLabel(status) {
-            const statuses = {
-                'pending': '⏳ В обработке',
-                'confirmed': '✅ Подтверждено',
-                'cancelled': '❌ Отменено'
+        function detectOrderType(order) {
+            // Если тип уже указан, используем его
+            if (order.type) {
+                return order.type;
+            }
+            
+            // Определяем тип по наличию полей
+            if (order.direction && order.flight_date) {
+                return 'flight';
+            }
+            if (order.selectedDates && order.department) {
+                return 'weekend';
+            }
+            if (order.hotel_name) {
+                return 'hotel';
+            }
+            if (order.aeroexpress_direction) {
+                return 'aeroexpress';
+            }
+            
+            return 'unknown';
+        }
+
+
+        function getFilteredOrders() {
+            if (currentFilter === 'all') {
+                return allOrders;
+            }
+            return allOrders.filter(order => {
+                const orderType = detectOrderType(order);
+                return orderType === currentFilter;
+            });
+        }
+
+        function updateOrderCounts() {
+            const counts = {
+                'all': allOrders.length,
+                'flight': allOrders.filter(order => detectOrderType(order) === 'flight').length,
+                'weekend': allOrders.filter(order => detectOrderType(order) === 'weekend').length,
+                'hotel': allOrders.filter(order => detectOrderType(order) === 'hotel').length,
+                'aeroexpress': allOrders.filter(order => detectOrderType(order) === 'aeroexpress').length
             };
-            return statuses[status] || status;
+
+            Object.keys(counts).forEach(type => {
+                const element = document.getElementById(`count-${type}`);
+                if (element) {
+                    element.textContent = counts[type];
+                }
+            });
+        }
+
+        function filterOrders(type) {
+            // Обновляем активную вкладку
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Устанавливаем текущий фильтр
+            currentFilter = type;
+            
+            // Отображаем отфильтрованные заказы
+            displayOrders(getFilteredOrders());
+        }
+
+        function displayOrders(orders) {
+            if (orders.length === 0) {
+                const filterText = currentFilter === 'all' ? 'заказов' : getTypeLabel(currentFilter).toLowerCase();
+                document.getElementById('orders').innerHTML = `<div class="no-orders">${filterText} пока нет</div>`;
+                return;
+            }
+
+            let tableHTML = `
+                <table class="orders-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Тип</th>
+                        <th>Пользователь</th>
+                        <th>Детали</th>
+                        <th>Дата создания</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                    <tbody>
+            `;
+
+            orders.forEach(order => {
+                const orderType = detectOrderType(order);
+                const typeClass = `type-${orderType}`;
+                
+                let details = '';
+                if (orderType === 'weekend') {
+                    details = `
+                        <div><strong>Подразделение:</strong> ${order.department || 'Не указано'}</div>
+                        <div><strong>Должность:</strong> ${order.position || 'Не указано'}</div>
+                        <div><strong>Даты:</strong> ${order.selectedDates ? order.selectedDates.join(', ') : 'Не указаны'}</div>
+                    `;
+                } else if (orderType === 'flight') {
+                    details = `
+                        <div><strong>Направление:</strong> ${order.direction || 'Не указано'}</div>
+                        <div><strong>Дата рейса:</strong> ${order.flight_date || order.date || 'Не указана'}</div>
+                        <div><strong>Пожелания:</strong> ${order.wishes || 'Нет'}</div>
+                        <div><strong>Подразделение:</strong> ${order.department || 'Не указано'}</div>
+                        <div><strong>Должность:</strong> ${order.position || 'Не указано'}</div>
+                    `;
+                } else if (orderType === 'hotel') {
+                    details = `
+                        <div><strong>Гостиница:</strong> ${order.hotel_name || 'Не указана'}</div>
+                        <div><strong>Даты:</strong> ${order.check_in || 'Не указаны'} - ${order.check_out || 'Не указаны'}</div>
+                        <div><strong>Пожелания:</strong> ${order.wishes || 'Нет'}</div>
+                    `;
+                } else if (orderType === 'aeroexpress') {
+                    details = `
+                        <div><strong>Направление:</strong> ${order.direction || order.aeroexpress_direction || 'Не указано'}</div>
+                        <div><strong>Дата:</strong> ${order.date || 'Не указана'}</div>
+                        <div><strong>Время:</strong> ${order.time || 'Не указано'}</div>
+                        <div><strong>Пожелания:</strong> ${order.wishes || 'Нет'}</div>
+                    `;
+                } else {
+                    details = '<div>Детали недоступны</div>';
+                }
+
+            const createdDate = new Date(order.created_at || order.createdAt).toLocaleString('ru-RU');
+
+            tableHTML += `
+                <tr>
+                    <td><strong>${order.id}</strong></td>
+                    <td><span class="order-type ${typeClass}">${getTypeLabel(orderType)}</span></td>
+                    <td>
+                        <div class="user-info">${order.full_name || 'Не указано'}</div>
+                        <div class="employee-id">ID: ${order.employee_id || 'Не указан'}</div>
+                    </td>
+                    <td class="date-info">${details}</td>
+                    <td class="date-info">${createdDate}</td>
+                    <td>
+                        <button class="action-btn" onclick="deleteOrder('${order.id}')" title="Удалить заказ">
+                            🗑️ Удалить
+                        </button>
+                    </td>
+                </tr>
+            `;
+            });
+
+            tableHTML += '</tbody></table>';
+            document.getElementById('orders').innerHTML = tableHTML;
+        }
+
+        async function deleteOrder(orderId) {
+            if (!confirm(`Вы уверены, что хотите удалить заказ ${orderId}? Это действие нельзя отменить.`)) {
+                return;
+            }
+
+            try {
+                console.log('Удаляем заказ:', orderId);
+                
+                const response = await fetch(`/api/orders/${orderId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                console.log('Результат удаления:', data);
+
+                if (data.success) {
+                    alert('Заказ успешно удален!');
+                    
+                    // Удаляем заказ из локального массива
+                    allOrders = allOrders.filter(order => order.id !== orderId);
+                    
+                    // Обновляем счетчики
+                    updateOrderCounts();
+                    
+                    // Отображаем обновленный список
+                    displayOrders(getFilteredOrders());
+                } else {
+                    alert('Ошибка удаления заказа: ' + (data.message || 'Неизвестная ошибка'));
+                }
+
+            } catch (error) {
+                console.error('Ошибка удаления заказа:', error);
+                alert('Ошибка удаления заказа: ' + error.message);
+            }
         }
 
         async function loadData() {
-            await Promise.all([loadStats(), loadOrders()]);
+            try {
+                await Promise.all([loadStats(), loadOrders()]);
+            } catch (error) {
+                console.error('Ошибка при загрузке данных:', error);
+            }
+        }
+
+        // Функция экспорта в Excel
+        function exportToExcel() {
+            try {
+                const filteredOrders = getFilteredOrders();
+                const filterName = getFilterName(currentFilter);
+                
+                if (filteredOrders.length === 0) {
+                    alert('Нет данных для экспорта');
+                    return;
+                }
+
+                // Проверяем доступность библиотеки XLSX
+                if (typeof XLSX !== 'undefined') {
+                    exportToXLSX(filteredOrders, filterName);
+                } else {
+                    exportToCSV(filteredOrders, filterName);
+                }
+                
+            } catch (error) {
+                console.error('Ошибка при экспорте в Excel:', error);
+                alert('Ошибка при экспорте данных: ' + error.message);
+            }
+        }
+
+        // Экспорт в формат XLSX (настоящий Excel)
+        function exportToXLSX(orders, filterName) {
+            // Подготавливаем данные для Excel
+            const worksheetData = [
+                ['ID', 'Тип', 'ФИО', 'Табельный номер', 'Подразделение', 'Должность', 'Направление', 'Дата рейса', 'Даты выходных', 'Пожелания', 'Дата создания']
+            ];
+
+            orders.forEach(order => {
+                const orderType = detectOrderType(order);
+                const row = [
+                    order.id || '',
+                    getTypeLabel(orderType),
+                    order.full_name || order.fullName || 'Не указано',
+                    order.employee_id || order.employeeId || 'Не указан',
+                    order.department || 'Не указано',
+                    order.position || 'Не указано',
+                    order.direction || 'Не указано',
+                    order.flight_date || order.date || 'Не указана',
+                    order.selectedDates ? order.selectedDates.join(', ') : '',
+                    order.wishes || 'Нет',
+                    new Date(order.created_at || order.createdAt).toLocaleString('ru-RU')
+                ];
+                worksheetData.push(row);
+            });
+
+            // Создаем рабочую книгу
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(worksheetData);
+            
+            // Устанавливаем ширину колонок
+            const colWidths = [
+                { wch: 12 }, // ID
+                { wch: 15 }, // Тип
+                { wch: 25 }, // ФИО
+                { wch: 15 }, // Табельный номер
+                { wch: 15 }, // Подразделение
+                { wch: 10 }, // Должность
+                { wch: 20 }, // Направление
+                { wch: 15 }, // Дата рейса
+                { wch: 20 }, // Даты выходных
+                { wch: 30 }, // Пожелания
+                { wch: 20 }  // Дата создания
+            ];
+            ws['!cols'] = colWidths;
+
+            XLSX.utils.book_append_sheet(wb, ws, 'Заказы');
+            
+            // Скачиваем файл
+            XLSX.writeFile(wb, `ExpressBot_${filterName}_${new Date().toISOString().split('T')[0]}.xlsx`);
+            
+            console.log(`Экспортировано ${orders.length} заказов типа "${filterName}" в формате XLSX`);
+        }
+
+        // Экспорт в формат CSV (резервный вариант)
+        function exportToCSV(orders, filterName) {
+            // Создаем CSV контент с разделителем точка с запятой
+            let csvContent = '\uFEFF'; // BOM для корректного отображения кириллицы
+            
+                // Заголовки (используем точку с запятой как разделитель)
+                csvContent += 'ID;Тип;ФИО;Табельный номер;Подразделение;Должность;Направление;Дата рейса;Даты выходных;Пожелания;Дата создания\n';
+            
+            // Данные
+            orders.forEach(order => {
+                const orderType = detectOrderType(order);
+                const row = [
+                    order.id || '',
+                    getTypeLabel(orderType).replace(/[;]/g, ','), // Заменяем точки с запятой на запятые в данных
+                    (order.full_name || order.fullName || 'Не указано').replace(/[;]/g, ','),
+                    (order.employee_id || order.employeeId || 'Не указан'),
+                    (order.department || 'Не указано'),
+                    (order.position || 'Не указано'),
+                    (order.direction || 'Не указано'),
+                    (order.flight_date || order.date || 'Не указана'),
+                    (order.selectedDates ? order.selectedDates.join(', ') : ''),
+                    (order.wishes || 'Нет').replace(/[;]/g, ','),
+                    new Date(order.created_at || order.createdAt).toLocaleString('ru-RU')
+                ];
+                
+                // Оборачиваем каждое поле в кавычки и разделяем точкой с запятой
+                csvContent += row.map(field => `"${field}"`).join(';') + '\n';
+            });
+            
+            // Создаем и скачиваем файл
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `ExpressBot_${filterName}_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            console.log(`Экспортировано ${orders.length} заказов типа "${filterName}" в формате CSV`);
+        }
+
+        // Функция получения названия фильтра
+        function getFilterName(filter) {
+            const names = {
+                'all': 'Все_заказы',
+                'flight': 'Заказы_рейсов',
+                'weekend': 'Заказы_выходных',
+                'hotel': 'Заказы_гостиниц',
+                'aeroexpress': 'Заказы_аэроэкспресса'
+            };
+            return names[filter] || 'Неизвестный_тип';
         }
 
         // Загружаем данные при загрузке страницы

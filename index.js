@@ -32,12 +32,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(logger.middleware());
 app.use(express.static('public'));
 app.get('/', (req, res) => {
-  res.json({
-    message: 'ExpressBOT GitHub API Server',
-    status: 'running',
-    version: '1.0.0',
-    timestamp: new Date().toISOString()
-  });
+  res.redirect('/messenger.html');
 });
 app.get('/test', async (req, res) => {
   try {
@@ -224,6 +219,10 @@ app.get('/api/orders/:orderId', async (req, res) => {
 
 app.put('/api/orders/:orderId/status', async (req, res) => {
   await messengerBotAPI.updateOrderStatus(req, res);
+});
+
+app.delete('/api/orders/:orderId', async (req, res) => {
+  await messengerBotAPI.deleteOrder(req, res);
 });
 
 const requireAdminAuth = (req, res, next) => {
