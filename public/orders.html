@@ -308,7 +308,13 @@
                 console.log('Данные заказов:', data);
                 
                 if (data.success) {
-                    const orders = data.data;
+                    const orders = data.data.orders || data.data; // Поддержка разных форматов ответа
+                    
+                    if (!Array.isArray(orders)) {
+                        console.error('orders не является массивом:', orders);
+                        document.getElementById('orders').innerHTML = '<div class="error">Ошибка: данные заказов не в правильном формате</div>';
+                        return;
+                    }
                     
                     if (orders.length === 0) {
                         document.getElementById('orders').innerHTML = '<div class="no-orders">Заказов пока нет</div>';
