@@ -54,31 +54,41 @@ class DatabaseManager {
       const {
         id,
         userId,
+        user_id,
         fullName,
+        full_name,
         employeeId,
+        employee_id,
         position,
         location,
         department,
         date,
+        flight_date,
         direction,
         wishes,
-        status = 'pending'
+        type,
+        selectedDates,
+        status = 'pending',
+        created_at,
+        updated_at
       } = orderData;
 
       const order = {
         id,
-        user_id: userId,
-        full_name: fullName,
-        employee_id: employeeId,
+        user_id: user_id || userId,
+        full_name: full_name || fullName,
+        employee_id: employee_id || employeeId,
         position,
         location,
         department,
-        flight_date: date,
+        flight_date: flight_date || date,
         direction,
         wishes,
+        type,
+        selectedDates,
         status,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_at: created_at || new Date().toISOString(),
+        updated_at: updated_at || new Date().toISOString()
       };
 
       // Удаляем существующий заказ с таким же ID, если есть

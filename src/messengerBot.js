@@ -1795,6 +1795,11 @@ class MessengerBot {
   async handleWeekendSubmit(userId, args) {
     const user = this.getOrCreateUser(userId);
     
+    // Отладочная информация
+    console.log('DEBUG: user.weekendOrder:', JSON.stringify(user.weekendOrder, null, 2));
+    console.log('DEBUG: user.fullName:', user.fullName);
+    console.log('DEBUG: user.employeeId:', user.employeeId);
+    
     try {
       // Создаем заказ выходных
       const orderId = this.generateOrderId();
@@ -1811,6 +1816,8 @@ class MessengerBot {
         created_at: new Date(),
         updated_at: new Date()
       };
+      
+      console.log('DEBUG: order to save:', JSON.stringify(order, null, 2));
 
       // Сохраняем заказ в базу данных
       await this.database.saveOrder(order);
