@@ -81,6 +81,22 @@ class MessengerBot {
       description: 'Изменение заказа',
       handler: this.handleEditOrder.bind(this)
     });
+
+    // Новые команды для услуг
+    this.commands.set('order_weekend', {
+      description: 'Заказ выходных',
+      handler: this.handleOrderWeekend.bind(this)
+    });
+
+    this.commands.set('order_hotel', {
+      description: 'Заказ гостиницы',
+      handler: this.handleOrderHotel.bind(this)
+    });
+
+    this.commands.set('order_aeroexpress', {
+      description: 'Заказ аэроэкспресса',
+      handler: this.handleOrderAeroexpress.bind(this)
+    });
   }
 
   async processMessage(userId, message) {
@@ -133,7 +149,7 @@ class MessengerBot {
       type: 'welcome',
       data: {
         message: welcomeData,
-        locationButtons: welcomeData.locationButtons
+        serviceButtons: welcomeData.serviceButtons
       }
     };
   }
@@ -141,28 +157,26 @@ class MessengerBot {
   getWelcomeMessage() {
     return {
       logo: 'CREW SERVICES',
-      title: 'Привет! Я ваш персональный помощник для заказа рейса.',
+      title: 'Привет! Я ваш персональный помощник для заказа услуг.',
       content: [
-        'Прежде чем подать заявку, обратите внимание на ключевые правила:',
+        'Выберите нужную услугу из меню ниже:',
         '',
+        '**Доступные услуги:**',
+        '• ✈️ Заказ рейса - подача заявки на рейс/эстафету',
+        '• 🏖️ Заказ выходных - заявка на выходные дни',
+        '• 🏨 Заказ гостиницы - бронирование номера',
+        '• 🚄 Заказ аэроэкспресса - билеты на аэроэкспресс',
+        '',
+        'Для заказа рейса действуют специальные правила:',
         '**Лимит:** Одна заявка в месяц на рейс/эстафету.',
-        '',
         '**Сроки:** С 20-го по 5-е число (вкл.) на следующий месяц.',
-        '',
-        '**Условия ЧКЭ:** 100% доступность и отсутствие нарушений за последние 3 месяца.',
-        '_Внимание: Отмена заявки при снижении показателей._',
-        '',
-        '**Приоритеты:**',
-        '• Наземные мероприятия важнее заказанных рейсов.',
-        '• При избытке заявок — предпочтение тем, у кого меньше рейсов по направлению и нет отпуска в заказанном месяце.',
-        '',
-        'Теперь, пожалуйста, выберите вашу локацию и отделение ниже:'
+        '**Условия ЧКЭ:** 100% доступность и отсутствие нарушений за последние 3 месяца.'
       ],
-      locationButtons: [
-        { id: 'moscow', name: 'Москва', icon: '🏛️' },
-        { id: 'spb', name: 'Санкт-Петербург', icon: '🏛️' },
-        { id: 'krasnoyarsk', name: 'Красноярск', icon: '🏔️' },
-        { id: 'sochi', name: 'Сочи', icon: '🌴' }
+      serviceButtons: [
+        { id: 'order_flight', name: '✈️ Заказ рейса', description: 'Подача заявки на рейс/эстафету' },
+        { id: 'order_weekend', name: '🏖️ Заказ выходных', description: 'Заявка на выходные дни' },
+        { id: 'order_hotel', name: '🏨 Заказ гостиницы', description: 'Бронирование номера' },
+        { id: 'order_aeroexpress', name: '🚄 Заказ аэроэкспресса', description: 'Билеты на аэроэкспресс' }
       ]
     };
   }
@@ -173,12 +187,15 @@ class MessengerBot {
       '',
       '/start - Начать работу с ботом',
       '/order_flight - Заказать рейс',
+      '/order_weekend - Заказать выходные',
+      '/order_hotel - Заказать гостиницу',
+      '/order_aeroexpress - Заказать аэроэкспресс',
       '/my_orders - Просмотреть мои заказы',
       '/cancel_order - Отменить заказ',
       '/status - Проверить статус заказа',
       '/help - Показать эту справку',
       '',
-      '💡 Для заказа рейса используйте команду /order_flight'
+      '💡 Выберите нужную услугу из главного меню'
     ];
 
     return {
@@ -186,38 +203,19 @@ class MessengerBot {
       data: {
         message: helpText.join('\n'),
         buttons: [
-          { text: 'Заказать рейс', command: '/order_flight' },
-          { text: 'Мои заказы', command: '/my_orders' }
+          { text: '✈️ Заказ рейса', command: '/order_flight' },
+          { text: '🏖️ Заказ выходных', command: '/order_weekend' },
+          { text: '🏨 Заказ гостиницы', command: '/order_hotel' },
+          { text: '🚄 Заказ аэроэкспресса', command: '/order_aeroexpress' },
+          { text: '📋 Мои заказы', command: '/my_orders' }
         ]
       }
     };
   }
 
   handleOrderFlight(userId, args) {
-    const user = this.getOrCreateUser(userId);
-    user.state = 'ordering_flight';
-    
-    return {
-      type: 'flight_order_form',
-      data: {
-        message: '✈️ Заказ рейса',
-        form: {
-          fields: [
-            { name: 'departure', label: 'Откуда', type: 'text', required: true },
-            { name: 'destination', label: 'Куда', type: 'text', required: true },
-            { name: 'date', label: 'Дата вылета', type: 'date', required: true },
-            { name: 'time', label: 'Время вылета', type: 'time', required: true },
-            { name: 'passengers', label: 'Количество пассажиров', type: 'number', required: true },
-            { name: 'contact', label: 'Контактный телефон', type: 'text', required: true },
-            { name: 'notes', label: 'Дополнительные пожелания', type: 'textarea', required: false }
-          ]
-        },
-        buttons: [
-          { text: 'Отправить заявку', action: 'submit_flight_order' },
-          { text: 'Отмена', command: '/start' }
-        ]
-      }
-    };
+    // Перенаправляем на существующую функцию заказа рейса
+    return this.handleLocationSelection(userId, ['moscow']); // Начинаем с выбора локации
   }
 
   handleMyOrders(userId, args) {
@@ -1136,8 +1134,90 @@ class MessengerBot {
     }
     return false;
   }
+
+  // Обработчики новых услуг
+  handleOrderWeekend(userId, args) {
+    const user = this.getOrCreateUser(userId);
+    user.state = 'ordering_weekend';
+    
+    return {
+      type: 'weekend_order_form',
+      data: {
+        message: '🏖️ Заказ выходных',
+        form: {
+          fields: [
+            { name: 'start_date', label: 'Дата начала выходных', type: 'date', required: true },
+            { name: 'end_date', label: 'Дата окончания выходных', type: 'date', required: true },
+            { name: 'reason', label: 'Причина заказа выходных', type: 'text', required: true },
+            { name: 'contact', label: 'Контактный телефон', type: 'text', required: true },
+            { name: 'notes', label: 'Дополнительные пожелания', type: 'textarea', required: false }
+          ]
+        },
+        buttons: [
+          { text: 'Отправить заявку', action: 'submit_weekend_order' },
+          { text: 'Отмена', command: '/start' }
+        ]
+      }
+    };
+  }
+
+  handleOrderHotel(userId, args) {
+    const user = this.getOrCreateUser(userId);
+    user.state = 'ordering_hotel';
+    
+    return {
+      type: 'hotel_order_form',
+      data: {
+        message: '🏨 Заказ гостиницы',
+        form: {
+          fields: [
+            { name: 'check_in', label: 'Дата заезда', type: 'date', required: true },
+            { name: 'check_out', label: 'Дата выезда', type: 'date', required: true },
+            { name: 'guests', label: 'Количество гостей', type: 'number', required: true },
+            { name: 'room_type', label: 'Тип номера', type: 'select', options: ['Стандарт', 'Улучшенный', 'Люкс'], required: true },
+            { name: 'city', label: 'Город', type: 'text', required: true },
+            { name: 'contact', label: 'Контактный телефон', type: 'text', required: true },
+            { name: 'notes', label: 'Дополнительные пожелания', type: 'textarea', required: false }
+          ]
+        },
+        buttons: [
+          { text: 'Отправить заявку', action: 'submit_hotel_order' },
+          { text: 'Отмена', command: '/start' }
+        ]
+      }
+    };
+  }
+
+  handleOrderAeroexpress(userId, args) {
+    const user = this.getOrCreateUser(userId);
+    user.state = 'ordering_aeroexpress';
+    
+    return {
+      type: 'aeroexpress_order_form',
+      data: {
+        message: '🚄 Заказ аэроэкспресса',
+        form: {
+          fields: [
+            { name: 'departure_station', label: 'Станция отправления', type: 'select', options: ['Аэропорт Шереметьево', 'Аэропорт Домодедово', 'Аэропорт Внуково'], required: true },
+            { name: 'arrival_station', label: 'Станция прибытия', type: 'select', options: ['Белорусский вокзал', 'Павелецкий вокзал', 'Киевский вокзал'], required: true },
+            { name: 'departure_date', label: 'Дата поездки', type: 'date', required: true },
+            { name: 'departure_time', label: 'Время отправления', type: 'time', required: true },
+            { name: 'passengers', label: 'Количество пассажиров', type: 'number', required: true },
+            { name: 'contact', label: 'Контактный телефон', type: 'text', required: true },
+            { name: 'notes', label: 'Дополнительные пожелания', type: 'textarea', required: false }
+          ]
+        },
+        buttons: [
+          { text: 'Отправить заявку', action: 'submit_aeroexpress_order' },
+          { text: 'Отмена', command: '/start' }
+        ]
+      }
+    };
+  }
 }
 
 module.exports = MessengerBot;
+
+
 
 

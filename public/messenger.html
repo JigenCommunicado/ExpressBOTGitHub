@@ -249,6 +249,32 @@
             margin-top: 15px;
         }
 
+        .service-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .service-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .service-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
         .location-button {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -781,6 +807,12 @@
                 contentDiv.innerHTML = formatSimpleMessage(response.data);
             } else if (response.type === 'invalid_direction') {
                 contentDiv.innerHTML = formatSimpleMessage(response.data);
+            } else if (response.type === 'weekend_order_form') {
+                contentDiv.innerHTML = formatWeekendOrderForm(response.data);
+            } else if (response.type === 'hotel_order_form') {
+                contentDiv.innerHTML = formatHotelOrderForm(response.data);
+            } else if (response.type === 'aeroexpress_order_form') {
+                contentDiv.innerHTML = formatAeroexpressOrderForm(response.data);
             } else {
                 contentDiv.innerHTML = formatSimpleMessage(response.data);
             }
@@ -827,9 +859,17 @@
             }
             html += '</div>';
             
-            // Используем locationButtons из корневого объекта data
+            // Используем serviceButtons или locationButtons из корневого объекта data
+            const serviceButtons = data.serviceButtons || messageData.serviceButtons;
             const locationButtons = data.locationButtons || messageData.locationButtons;
-            if (locationButtons && Array.isArray(locationButtons)) {
+            
+            if (serviceButtons && Array.isArray(serviceButtons)) {
+                html += '<div class="service-buttons">';
+                serviceButtons.forEach(button => {
+                    html += `<button class="service-button" onclick="selectService('${button.id}')">${button.name}</button>`;
+                });
+                html += '</div>';
+            } else if (locationButtons && Array.isArray(locationButtons)) {
                 html += '<div class="location-buttons">';
                 locationButtons.forEach(button => {
                     html += `<button class="location-button" onclick="selectLocation('${button.id}')">${button.icon} ${button.name}</button>`;
@@ -1294,6 +1334,116 @@
             });
         }
 
+        // Функции для новых форм заказов
+        function formatWeekendOrderForm(data) {
+            let html = `<div class="message-title">${data.message}</div>`;
+            html += '<div class="message-text">Для заказа выходных заполните форму:</div>';
+            
+            if (data.form && data.form.fields) {
+                html += '<div style="margin-top: 15px;">';
+                data.form.fields.forEach(field => {
+                    html += `<div class="form-field">`;
+                    html += `<label>${field.label}${field.required ? ' *' : ''}</label>`;
+                    if (field.type === 'textarea') {
+                        html += `<textarea placeholder="Введите ${field.label.toLowerCase()}"></textarea>`;
+                    } else {
+                        html += `<input type="${field.type}" placeholder="Введите ${field.label.toLowerCase()}">`;
+                    }
+                    html += '</div>';
+                });
+                html += '</div>';
+            }
+            
+            if (data.buttons) {
+                html += '<div class="buttons">';
+                data.buttons.forEach(button => {
+                    html += `<button class="button" onclick="sendMessage('${button.command || button.action}')">${button.text}</button>`;
+                });
+                html += '</div>';
+            }
+            
+            return html;
+        }
+
+        function formatHotelOrderForm(data) {
+            let html = `<div class="message-title">${data.message}</div>`;
+            html += '<div class="message-text">Для заказа гостиницы заполните форму:</div>';
+            
+            if (data.form && data.form.fields) {
+                html += '<div style="margin-top: 15px;">';
+                data.form.fields.forEach(field => {
+                    html += `<div class="form-field">`;
+                    html += `<label>${field.label}${field.required ? ' *' : ''}</label>`;
+                    if (field.type === 'textarea') {
+                        html += `<textarea placeholder="Введите ${field.label.toLowerCase()}"></textarea>`;
+                    } else if (field.type === 'select') {
+                        html += `<select>`;
+                        html += `<option value="">Выберите ${field.label.toLowerCase()}</option>`;
+                        field.options.forEach(option => {
+                            html += `<option value="${option}">${option}</option>`;
+                        });
+                        html += `</select>`;
+                    } else {
+                        html += `<input type="${field.type}" placeholder="Введите ${field.label.toLowerCase()}">`;
+                    }
+                    html += '</div>';
+                });
+                html += '</div>';
+            }
+            
+            if (data.buttons) {
+                html += '<div class="buttons">';
+                data.buttons.forEach(button => {
+                    html += `<button class="button" onclick="sendMessage('${button.command || button.action}')">${button.text}</button>`;
+                });
+                html += '</div>';
+            }
+            
+            return html;
+        }
+
+        function formatAeroexpressOrderForm(data) {
+            let html = `<div class="message-title">${data.message}</div>`;
+            html += '<div class="message-text">Для заказа аэроэкспресса заполните форму:</div>';
+            
+            if (data.form && data.form.fields) {
+                html += '<div style="margin-top: 15px;">';
+                data.form.fields.forEach(field => {
+                    html += `<div class="form-field">`;
+                    html += `<label>${field.label}${field.required ? ' *' : ''}</label>`;
+                    if (field.type === 'textarea') {
+                        html += `<textarea placeholder="Введите ${field.label.toLowerCase()}"></textarea>`;
+                    } else if (field.type === 'select') {
+                        html += `<select>`;
+                        html += `<option value="">Выберите ${field.label.toLowerCase()}</option>`;
+                        field.options.forEach(option => {
+                            html += `<option value="${option}">${option}</option>`;
+                        });
+                        html += `</select>`;
+                    } else {
+                        html += `<input type="${field.type}" placeholder="Введите ${field.label.toLowerCase()}">`;
+                    }
+                    html += '</div>';
+                });
+                html += '</div>';
+            }
+            
+            if (data.buttons) {
+                html += '<div class="buttons">';
+                data.buttons.forEach(button => {
+                    html += `<button class="button" onclick="sendMessage('${button.command || button.action}')">${button.text}</button>`;
+                });
+                html += '</div>';
+            }
+            
+            return html;
+        }
+
+        // Функция для выбора услуги
+        function selectService(serviceId) {
+            sendMessage(`/${serviceId}`);
+        }
+
         // Инициализация
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('messageInput').focus();
@@ -1303,5 +1453,7 @@
     </script>
 </body>
 </html>
+
+
 
 
