@@ -292,6 +292,100 @@
             cursor: not-allowed;
             transform: none;
         }
+
+        /* Стили для раздела квот */
+        .quota-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #e9ecef;
+        }
+
+        .quota-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .quota-btn {
+            background: #17a2b8;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .quota-btn:hover {
+            background: #138496;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3);
+        }
+
+        .quota-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .quota-location {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            border: 1px solid #dee2e6;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .quota-location h3 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .quota-position {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f3f4;
+        }
+
+        .quota-position:last-child {
+            border-bottom: none;
+        }
+
+        .quota-position-name {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .quota-numbers {
+            display: flex;
+            gap: 15px;
+            font-size: 0.9rem;
+        }
+
+        .quota-used {
+            color: #dc3545;
+            font-weight: 600;
+        }
+
+        .quota-available {
+            color: #28a745;
+            font-weight: 600;
+        }
+
+        .quota-total {
+            color: #6c757d;
+        }
     </style>
 </head>
 <body>
@@ -306,6 +400,16 @@
         </div>
 
         <div class="orders-section">
+            <!-- Управление квотами выходных -->
+            <div class="quota-section">
+                <h2 class="section-title">📊 Управление квотами выходных</h2>
+                <div class="quota-controls">
+                    <button class="quota-btn" onclick="loadQuotaStats()">📈 Загрузить статистику квот</button>
+                    <button class="quota-btn" onclick="resetQuotas()">🔄 Сбросить квоты</button>
+                </div>
+                <div id="quotaStats" class="quota-stats"></div>
+            </div>
+
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <h2 class="section-title">📋 Управление заказами</h2>
                 <div style="display: flex; gap: 10px;">
@@ -775,6 +879,105 @@
                 'aeroexpress': 'Заказы_аэроэкспресса'
             };
             return names[filter] || 'Неизвестный_тип';
+        }
+
+        // Функции для работы с квотами
+        async function loadQuotaStats() {
+            try {
+                const response = await fetch('/api/quotas/stats', {
+                    method: 'GET',
+                    headers: {
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayQuotaStats(data.data.stats);
+                } else {
+                    console.error('Ошибка загрузки статистики квот:', data.message);
+                    document.getElementById('quotaStats').innerHTML = '<div class="error">Ошибка загрузки статистики квот</div>';
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки статистики квот:', error);
+                document.getElementById('quotaStats').innerHTML = '<div class="error">Ошибка подключения к серверу</div>';
+            }
+        }
+
+        function displayQuotaStats(stats) {
+            const container = document.getElementById('quotaStats');
+            
+            if (!stats || Object.keys(stats).length === 0) {
+                container.innerHTML = '<div class="no-data">Нет данных о квотах</div>';
+                return;
+            }
+
+            let html = '';
+            
+            Object.keys(stats).forEach(location => {
+                const locationData = stats[location];
+                html += `
+                    <div class="quota-location">
+                        <h3>📍 ${location}</h3>
+                `;
+                
+                Object.keys(locationData).forEach(position => {
+                    const positionData = locationData[position];
+                    html += `
+                        <div class="quota-position">
+                            <span class="quota-position-name">${position}</span>
+                            <div class="quota-numbers">
+                                <span class="quota-used">Использовано: ${positionData.totalUsed}</span>
+                                <span class="quota-available">Доступно: ${positionData.totalAvailable}</span>
+                                <span class="quota-total">Всего: ${positionData.dailyQuota}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+            });
+            
+            container.innerHTML = html;
+        }
+
+        async function resetQuotas() {
+            if (!confirm('Вы уверены, что хотите сбросить все квоты к значениям по умолчанию?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/quotas/reset', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Квоты успешно сброшены');
+                    loadQuotaStats(); // Перезагружаем статистику
+                } else {
+                    alert('Ошибка сброса квот: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Ошибка сброса квот:', error);
+                alert('Ошибка подключения к серверу');
+            }
         }
 
         // Загружаем данные при загрузке страницы

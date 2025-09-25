@@ -1,4 +1,5 @@
 const DatabaseManager = require('./database');
+const WeekendQuotaManager = require('./weekendQuotaManager');
 
 class MessengerBot {
   constructor(logger) {
@@ -6,6 +7,7 @@ class MessengerBot {
     this.users = new Map();
     this.flightRequests = new Map();
     this.database = new DatabaseManager();
+    this.quotaManager = new WeekendQuotaManager();
     this.setupCommands();
     this.initDatabase();
   }
@@ -1335,14 +1337,61 @@ class MessengerBot {
   }
 
   handleWeekendFreeDates(userId, args) {
-    const freeDates = this.getFreeWeekendDates();
+    const user = this.getOrCreateUser(userId);
     
+    // Если пользователь еще не выбрал подразделение и должность, показываем общую информацию
+    if (!user.weekendOrder.department || !user.weekendOrder.position) {
+      return {
+        type: 'weekend_free_dates',
+        data: {
+          message: '📋 Свободные даты для выходных',
+          description: 'Для показа доступных дат сначала выберите подразделение и должность.',
+          buttons: [
+            { text: '📅 Заказать выходной', command: '/weekend_book' },
+            { text: '⬅️ Назад к меню выходных', command: '/order_weekend' }
+          ]
+        }
+      };
+    }
+
+    // Получаем доступные даты с учетом квот
+    const departments = {
+      'moscow': 'Москва',
+      'spb': 'Санкт-Петербург', 
+      'krasnoyarsk': 'Красноярск',
+      'sochi': 'Сочи'
+    };
+
+    const positions = {
+      'bp': 'BP',
+      'bp_bs': 'BP BS',
+      'sbe': 'SBE',
+      'ipb': 'IPB'
+    };
+
+    const location = departments[user.weekendOrder.department];
+    const position = positions[user.weekendOrder.position];
+    
+    const availableDates = this.quotaManager.getAvailableDates(location, position);
+    
+    // Форматируем даты для отображения
+    const formattedDates = availableDates.map(date => ({
+      date: date.toISOString().split('T')[0],
+      display: date.toLocaleDateString('ru-RU', { 
+        day: '2-digit', 
+        month: '2-digit', 
+        year: 'numeric',
+        weekday: 'short'
+      }),
+      available: true
+    }));
+
     return {
       type: 'weekend_free_dates',
       data: {
-        message: '📋 Свободные даты для выходных',
-        description: 'Доступные даты для заказа выходных:',
-        freeDates: freeDates,
+        message: `📋 Свободные даты для выходных\n📍 ${location} | 👤 ${position}`,
+        description: `Доступно мест: ${formattedDates.length}`,
+        freeDates: formattedDates.slice(0, 10), // Показываем только первые 10 дат
         buttons: [
           { text: '📅 Заказать выходной', command: '/weekend_book' },
           { text: '⬅️ Назад к меню выходных', command: '/order_weekend' }
@@ -1399,16 +1448,57 @@ class MessengerBot {
     }
 
     try {
-      // Обновляем статус заказа на "отменен"
-      await this.database.updateOrderStatus(weekendId, 'cancelled');
+      // Получаем информацию о заказе для освобождения квот
+      const order = await this.database.getOrderById(weekendId);
+      if (!order) {
+        return {
+          type: 'error',
+          data: {
+            message: '❌ Заказ не найден.',
+            buttons: [
+              { text: '⬅️ Назад к меню выходных', command: '/order_weekend' }
+            ]
+          }
+        };
+      }
+
+      // Освобождаем квоты для каждой даты
+      if (order.selectedDates && order.selectedDates.length > 0) {
+        const departments = {
+          'moscow': 'Москва',
+          'spb': 'Санкт-Петербург', 
+          'krasnoyarsk': 'Красноярск',
+          'sochi': 'Сочи'
+        };
+
+        const positions = {
+          'bp': 'BP',
+          'bp_bs': 'BP BS',
+          'sbe': 'SBE',
+          'ipb': 'IPB'
+        };
+
+        const location = departments[order.department];
+        const position = positions[order.position];
+
+        if (location && position) {
+          for (const dateStr of order.selectedDates) {
+            const date = new Date(dateStr);
+            this.quotaManager.cancelBooking(date, location, position);
+          }
+        }
+      }
+
+      // Удаляем заказ из базы данных
+      await this.database.deleteOrder(weekendId);
       
-      this.logger.info('Выходной день успешно отменен', { weekendId, userId });
+      this.logger.info('Выходной день успешно отменен и квоты освобождены', { weekendId, userId });
       
       return {
         type: 'weekend_cancelled',
         data: {
           message: '✅ Выходной день успешно отменен!',
-          description: 'Ваш заказ на выходной день был отменен.',
+          description: 'Ваш заказ на выходной день был отменен и места освобождены.',
           buttons: [
             { text: '📅 Заказать новый выходной', command: '/weekend_book' },
             { text: '📝 Мои заказанные даты', command: '/weekend_booked_dates' },
@@ -1802,6 +1892,49 @@ class MessengerBot {
     console.log('DEBUG: user.employeeId:', user.employeeId);
     
     try {
+      // Проверяем квоты для каждой выбранной даты
+      const departments = {
+        'moscow': 'Москва',
+        'spb': 'Санкт-Петербург', 
+        'krasnoyarsk': 'Красноярск',
+        'sochi': 'Сочи'
+      };
+
+      const positions = {
+        'bp': 'BP',
+        'bp_bs': 'BP BS',
+        'sbe': 'SBE',
+        'ipb': 'IPB'
+      };
+
+      const location = departments[user.weekendOrder.department];
+      const position = positions[user.weekendOrder.position];
+      
+      // Проверяем доступность каждой даты
+      const unavailableDates = [];
+      for (const dateStr of user.weekendOrder.selectedDates) {
+        const date = new Date(dateStr);
+        if (!this.quotaManager.isDateAvailable(date, location, position)) {
+          unavailableDates.push(dateStr);
+        }
+      }
+
+      if (unavailableDates.length > 0) {
+        return {
+          type: 'error',
+          data: {
+            message: `❌ К сожалению, на следующие даты нет доступных мест:\n${unavailableDates.join(', ')}\n\nПожалуйста, выберите другие даты.`,
+            buttons: [{
+              text: '📅 Выбрать другие даты',
+              command: 'weekend_book_weekend'
+            }, {
+              text: '⬅️ Назад в меню',
+              command: '/start'
+            }]
+          }
+        };
+      }
+
       // Создаем заказ выходных
       const orderId = this.generateOrderId();
       const order = {
@@ -1818,6 +1951,22 @@ class MessengerBot {
       };
       
       console.log('DEBUG: order to save:', JSON.stringify(order, null, 2));
+
+      // Бронируем даты в системе квот
+      for (const dateStr of user.weekendOrder.selectedDates) {
+        const date = new Date(dateStr);
+        const bookingResult = this.quotaManager.bookDate(date, location, position);
+        if (!bookingResult.success) {
+          // Если не удалось забронировать, отменяем предыдущие бронирования
+          for (const prevDateStr of user.weekendOrder.selectedDates) {
+            if (prevDateStr !== dateStr) {
+              const prevDate = new Date(prevDateStr);
+              this.quotaManager.cancelBooking(prevDate, location, position);
+            }
+          }
+          throw new Error(bookingResult.message);
+        }
+      }
 
       // Сохраняем заказ в базу данных
       await this.database.saveOrder(order);

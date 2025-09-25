@@ -225,6 +225,19 @@ app.delete('/api/orders/:orderId', async (req, res) => {
   await messengerBotAPI.deleteOrder(req, res);
 });
 
+// Маршруты для управления квотами выходных
+app.get('/api/quotas/stats', async (req, res) => {
+  await messengerBotAPI.getQuotaStats(req, res);
+});
+
+app.put('/api/quotas/update', async (req, res) => {
+  await messengerBotAPI.updateQuota(req, res);
+});
+
+app.post('/api/quotas/reset', async (req, res) => {
+  await messengerBotAPI.resetQuotas(req, res);
+});
+
 const requireAdminAuth = (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {

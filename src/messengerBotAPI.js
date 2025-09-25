@@ -409,6 +409,71 @@ class MessengerBotAPI {
       });
     }
   }
+
+  // Получить статистику квот
+  async getQuotaStats(req, res) {
+    try {
+      const { location } = req.query;
+      const stats = this.bot.quotaManager.getQuotaStats(location);
+      
+      res.json({
+        success: true,
+        data: { stats }
+      });
+    } catch (error) {
+      this.logger.error('Ошибка получения статистики квот', { error: error.message });
+      res.status(500).json({
+        success: false,
+        message: 'Ошибка получения статистики квот'
+      });
+    }
+  }
+
+  // Обновить квоту
+  async updateQuota(req, res) {
+    try {
+      const { location, position, quota } = req.body;
+
+      if (!location || !position || quota === undefined) {
+        return res.status(400).json({
+          success: false,
+          message: 'Требуются location, position и quota'
+        });
+      }
+
+      const result = this.bot.quotaManager.updateQuota(location, position, parseInt(quota));
+      
+      res.json({
+        success: true,
+        message: result.message,
+        data: { location, position, quota }
+      });
+    } catch (error) {
+      this.logger.error('Ошибка обновления квоты', { error: error.message });
+      res.status(500).json({
+        success: false,
+        message: 'Ошибка обновления квоты'
+      });
+    }
+  }
+
+  // Сбросить квоты
+  async resetQuotas(req, res) {
+    try {
+      const result = this.bot.quotaManager.resetQuotas();
+      
+      res.json({
+        success: true,
+        message: result.message
+      });
+    } catch (error) {
+      this.logger.error('Ошибка сброса квот', { error: error.message });
+      res.status(500).json({
+        success: false,
+        message: 'Ошибка сброса квот'
+      });
+    }
+  }
 }
 
 module.exports = MessengerBotAPI;
