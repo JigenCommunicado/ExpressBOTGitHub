@@ -118,6 +118,51 @@ class MessengerBot {
       description: 'Показать заказанные даты',
       handler: this.handleWeekendBookedDates.bind(this)
     });
+
+    this.commands.set('weekend_select_date', {
+      description: 'Выбрать дату для выходного',
+      handler: this.handleWeekendSelectDate.bind(this)
+    });
+
+    this.commands.set('weekend_department_selection', {
+      description: 'Выбор подразделения для выходных',
+      handler: this.handleWeekendDepartmentSelection.bind(this)
+    });
+
+    this.commands.set('weekend_position_selection', {
+      description: 'Выбор должности для выходных',
+      handler: this.handleWeekendPositionSelection.bind(this)
+    });
+
+    this.commands.set('weekend_confirm_dates', {
+      description: 'Подтверждение выбранных дат',
+      handler: this.handleWeekendConfirmDates.bind(this)
+    });
+
+    this.commands.set('weekend_submit', {
+      description: 'Отправка заказа выходных',
+      handler: this.handleWeekendSubmit.bind(this)
+    });
+
+    this.commands.set('weekend_prev_month', {
+      description: 'Предыдущий месяц в календаре',
+      handler: this.handleWeekendPrevMonth.bind(this)
+    });
+
+    this.commands.set('weekend_next_month', {
+      description: 'Следующий месяц в календаре',
+      handler: this.handleWeekendNextMonth.bind(this)
+    });
+
+    this.commands.set('weekend_continue_selection', {
+      description: 'Продолжить выбор дат',
+      handler: this.handleWeekendContinueSelection.bind(this)
+    });
+
+    this.commands.set('weekend_cancel_weekend', {
+      description: 'Отменить конкретный выходной',
+      handler: this.handleWeekendCancelWeekend.bind(this)
+    });
   }
 
   async processMessage(userId, message) {
@@ -1234,14 +1279,20 @@ class MessengerBot {
   // Обработчики для управления выходными днями
   handleWeekendBook(userId, args) {
     const user = this.getOrCreateUser(userId);
-    user.state = 'booking_weekend';
+    user.state = 'weekend_department_selection';
+    user.weekendOrder = {}; // Инициализируем объект заказа
     
     return {
-      type: 'weekend_booking_form',
+      type: 'weekend_department_selection',
       data: {
-        message: '📅 Заказ выходного дня',
-        description: 'Выберите дату для выходного дня:',
-        calendar: this.generateWeekendCalendar(new Date()),
+        message: '🏖️ Заказ выходного дня',
+        description: 'Выберите ваше подразделение:',
+        departmentButtons: [
+          { id: 'moscow', name: 'Москва', icon: '🏛️' },
+          { id: 'spb', name: 'Санкт-Петербург', icon: '🏛️' },
+          { id: 'krasnoyarsk', name: 'Красноярск', icon: '🏔️' },
+          { id: 'sochi', name: 'Сочи', icon: '🌴' }
+        ],
         buttons: [
           { text: '⬅️ Назад к меню выходных', command: '/order_weekend' },
           { text: '🏠 Главное меню', command: '/start' }
@@ -1250,11 +1301,11 @@ class MessengerBot {
     };
   }
 
-  handleWeekendCancel(userId, args) {
+  async handleWeekendCancel(userId, args) {
     const user = this.getOrCreateUser(userId);
     
     // Получаем заказанные выходные пользователя
-    const userWeekends = this.getUserWeekends(userId);
+    const userWeekends = await this.getUserWeekends(userId);
     
     if (userWeekends.length === 0) {
       return {
@@ -1299,9 +1350,9 @@ class MessengerBot {
     };
   }
 
-  handleWeekendBookedDates(userId, args) {
+  async handleWeekendBookedDates(userId, args) {
     const user = this.getOrCreateUser(userId);
-    const userWeekends = this.getUserWeekends(userId);
+    const userWeekends = await this.getUserWeekends(userId);
     
     if (userWeekends.length === 0) {
       return {
@@ -1331,6 +1382,55 @@ class MessengerBot {
     };
   }
 
+  async handleWeekendCancelWeekend(userId, args) {
+    const weekendId = args[0];
+    
+    if (!weekendId) {
+      return {
+        type: 'error',
+        data: {
+          message: '❌ Ошибка: не указан ID выходного дня для отмены.',
+          buttons: [
+            { text: '⬅️ Назад к меню выходных', command: '/order_weekend' }
+          ]
+        }
+      };
+    }
+
+    try {
+      // Обновляем статус заказа на "отменен"
+      await this.database.updateOrderStatus(weekendId, 'cancelled');
+      
+      this.logger.info('Выходной день успешно отменен', { weekendId, userId });
+      
+      return {
+        type: 'weekend_cancelled',
+        data: {
+          message: '✅ Выходной день успешно отменен!',
+          description: 'Ваш заказ на выходной день был отменен.',
+          buttons: [
+            { text: '📅 Заказать новый выходной', command: '/weekend_book' },
+            { text: '📝 Мои заказанные даты', command: '/weekend_booked_dates' },
+            { text: '⬅️ Назад к меню выходных', command: '/order_weekend' }
+          ]
+        }
+      };
+    } catch (error) {
+      this.logger.error('Ошибка отмены выходного дня', { error: error.message, weekendId, userId });
+      
+      return {
+        type: 'error',
+        data: {
+          message: '❌ Ошибка при отмене выходного дня. Попробуйте еще раз.',
+          buttons: [
+            { text: '📝 Мои заказанные даты', command: '/weekend_booked_dates' },
+            { text: '⬅️ Назад к меню выходных', command: '/order_weekend' }
+          ]
+        }
+      };
+    }
+  }
+
   // Вспомогательные функции для работы с выходными
   generateWeekendCalendar(date) {
     const year = date.getFullYear();
@@ -1345,9 +1445,23 @@ class MessengerBot {
     const daysInMonth = lastDay.getDate();
     const startingDayOfWeek = (firstDay.getDay() + 6) % 7; // Понедельник = 0
 
+    // Вычисляем предыдущий и следующий месяц
+    const prevMonth = new Date(year, month - 1, 1);
+    const nextMonth = new Date(year, month + 1, 1);
+
     const calendar = {
       month: monthNames[month],
       year: year,
+      currentMonth: month,
+      currentYear: year,
+      prevMonth: {
+        month: prevMonth.getMonth(),
+        year: prevMonth.getFullYear()
+      },
+      nextMonth: {
+        month: nextMonth.getMonth(),
+        year: nextMonth.getFullYear()
+      },
       daysOfWeek: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
       days: []
     };
@@ -1368,16 +1482,44 @@ class MessengerBot {
         date: dayDate.toISOString().split('T')[0],
         isWeekend: isWeekend,
         isPast: isPast,
-        available: !isPast && isWeekend
+        available: !isPast // Разрешаем выбор любой даты, кроме прошедших
       });
     }
 
     return calendar;
   }
 
-  getUserWeekends(userId) {
-    // Пока возвращаем пустой массив, позже будем получать из базы данных
-    return [];
+  async getUserWeekends(userId) {
+    try {
+      const allOrders = await this.database.getAllOrders();
+      const userWeekends = allOrders.filter(order => 
+        (order.user_id === userId || order.userId === userId) && 
+        order.type === 'weekend' && 
+        order.status !== 'cancelled'
+      );
+      
+      return userWeekends.map(order => ({
+        id: order.id,
+        date: order.selectedDates ? order.selectedDates[0] : order.date, // Берем первую дату для отображения
+        dates: order.selectedDates || [order.date],
+        department: order.department,
+        position: order.position,
+        status: order.status,
+        createdAt: order.created_at || order.createdAt,
+        formatted: (order.selectedDates || [order.date]).map(date => {
+          const d = new Date(date);
+          return d.toLocaleDateString('ru-RU', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+            weekday: 'long'
+          });
+        }).join(', ')
+      }));
+    } catch (error) {
+      this.logger.error('Ошибка получения заказанных выходных пользователя', { error: error.message, userId });
+      return [];
+    }
   }
 
   getFreeWeekendDates() {
@@ -1403,6 +1545,482 @@ class MessengerBot {
     }
     
     return freeDates.slice(0, 10); // Возвращаем только первые 10 дат
+  }
+
+  // Обработчики для полного процесса заказа выходных
+  handleWeekendSelectDate(userId, args) {
+    const user = this.getOrCreateUser(userId);
+    const selectedDate = args[0];
+    
+    if (!selectedDate) {
+      return {
+        type: 'invalid_date',
+        data: {
+          message: '❌ Неверная дата. Пожалуйста, выберите дату из календаря.',
+          buttons: [
+            { text: '⬅️ Назад к выбору должности', command: '/weekend_book' }
+          ]
+        }
+      };
+    }
+
+    // Добавляем дату к заказу
+    if (!user.weekendOrder.selectedDates) {
+      user.weekendOrder.selectedDates = [];
+    }
+    
+    // Проверяем, не выбрано ли уже 2 даты
+    if (user.weekendOrder.selectedDates.length >= 2) {
+      return {
+        type: 'max_dates_selected',
+        data: {
+          message: '❌ Вы уже выбрали максимальное количество дат (2). Сначала подтвердите текущий выбор.',
+          buttons: [
+            { text: '✅ Подтвердить выбор', command: '/weekend_confirm_dates' },
+            { text: '🔄 Начать заново', command: '/weekend_book' }
+          ]
+        }
+      };
+    }
+
+    // Проверяем, не выбрана ли уже эта дата
+    if (user.weekendOrder.selectedDates.includes(selectedDate)) {
+      return {
+        type: 'date_already_selected',
+        data: {
+          message: '❌ Эта дата уже выбрана. Выберите другую дату.',
+          buttons: [
+            { text: '✅ Подтвердить выбор', command: '/weekend_confirm_dates' },
+            { text: '🔄 Начать заново', command: '/weekend_book' }
+          ]
+        }
+      };
+    }
+
+    user.weekendOrder.selectedDates.push(selectedDate);
+    user.state = 'weekend_date_selection';
+
+    const dateObj = new Date(selectedDate);
+    const formattedDate = dateObj.toLocaleDateString('ru-RU', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      weekday: 'long'
+    });
+
+    const selectedDatesText = user.weekendOrder.selectedDates.map(date => {
+      const d = new Date(date);
+      return d.toLocaleDateString('ru-RU', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        weekday: 'long'
+      });
+    }).join(', ');
+
+    return {
+      type: 'weekend_date_selected',
+      data: {
+        message: `✅ Выбрана дата: ${formattedDate}`,
+        description: `Выбранные даты: ${selectedDatesText}`,
+        selectedDates: user.weekendOrder.selectedDates,
+        canSelectMore: user.weekendOrder.selectedDates.length < 2,
+        buttons: [
+          { text: '✅ Подтвердить выбор', command: '/weekend_confirm_dates' },
+          { text: '➕ Выбрать еще дату', command: '/weekend_continue_selection' },
+          { text: '🔄 Начать заново', command: '/weekend_book' }
+        ]
+      }
+    };
+  }
+
+  // Добавляем обработчики для всех этапов
+  handleWeekendDepartmentSelection(userId, args) {
+    const user = this.getOrCreateUser(userId);
+    const departmentId = args[0];
+    
+    const departments = {
+      'moscow': { name: 'Москва', icon: '🏛️' },
+      'spb': { name: 'Санкт-Петербург', icon: '🏛️' },
+      'krasnoyarsk': { name: 'Красноярск', icon: '🏔️' },
+      'sochi': { name: 'Сочи', icon: '🌴' }
+    };
+
+    const department = departments[departmentId];
+    if (!department) {
+      return {
+        type: 'invalid_department',
+        data: {
+          message: '❌ Неверное подразделение. Пожалуйста, выберите одно из предложенных.',
+          buttons: [
+            { text: '⬅️ Назад к выбору подразделения', command: '/weekend_book' }
+          ]
+        }
+      };
+    }
+
+    user.weekendOrder.department = departmentId;
+    user.state = 'weekend_position_selection';
+
+    return {
+      type: 'weekend_position_selection',
+      data: {
+        message: `✅ Выбрано подразделение: ${department.icon} ${department.name}`,
+        description: 'Выберите вашу должность:',
+        positionButtons: [
+          { id: 'bp', name: 'БП' },
+          { id: 'bp_bs', name: 'БП BS' },
+          { id: 'sbe', name: 'СБЭ' },
+          { id: 'ipb', name: 'ИПБ' }
+        ],
+        buttons: [
+          { text: '⬅️ Назад к выбору подразделения', command: '/weekend_book' }
+        ]
+      }
+    };
+  }
+
+  handleWeekendPositionSelection(userId, args) {
+    const user = this.getOrCreateUser(userId);
+    const positionId = args[0];
+    
+    const positions = {
+      'bp': { name: 'БП' },
+      'bp_bs': { name: 'БП BS' },
+      'sbe': { name: 'СБЭ' },
+      'ipb': { name: 'ИПБ' }
+    };
+
+    const position = positions[positionId];
+    if (!position) {
+      return {
+        type: 'invalid_position',
+        data: {
+          message: '❌ Неверная должность. Пожалуйста, выберите одну из предложенных.',
+          buttons: [
+            { text: '⬅️ Назад к выбору должности', command: '/weekend_book' }
+          ]
+        }
+      };
+    }
+
+    user.weekendOrder.position = positionId;
+    user.state = 'weekend_date_selection';
+
+    const departments = {
+      'moscow': { name: 'Москва', icon: '🏛️' },
+      'spb': { name: 'Санкт-Петербург', icon: '🏛️' },
+      'krasnoyarsk': { name: 'Красноярск', icon: '🏔️' },
+      'sochi': { name: 'Сочи', icon: '🌴' }
+    };
+
+    const department = departments[user.weekendOrder.department];
+
+    return {
+      type: 'weekend_date_selection',
+      data: {
+        message: `✅ Выбрана должность: ${position.name}`,
+        description: `Подразделение: ${department.icon} ${department.name}\nДолжность: ${position.name}\n\nВыберите даты для выходных (можно выбрать 1 или 2 даты):`,
+        calendar: this.generateWeekendCalendar(new Date()),
+        selectedDates: user.weekendOrder.selectedDates || [],
+        buttons: [
+          { text: '⬅️ Назад к выбору должности', command: '/weekend_book' }
+        ]
+      }
+    };
+  }
+
+  handleWeekendConfirmDates(userId, args) {
+    const user = this.getOrCreateUser(userId);
+    
+    if (!user.weekendOrder.selectedDates || user.weekendOrder.selectedDates.length === 0) {
+      return {
+        type: 'no_dates_selected',
+        data: {
+          message: '❌ Вы не выбрали ни одной даты. Пожалуйста, выберите даты для выходных.',
+          buttons: [
+            { text: '📅 Выбрать даты', command: '/weekend_book' }
+          ]
+        }
+      };
+    }
+
+    user.state = 'weekend_confirmation';
+
+    const departments = {
+      'moscow': { name: 'Москва', icon: '🏛️' },
+      'spb': { name: 'Санкт-Петербург', icon: '🏛️' },
+      'krasnoyarsk': { name: 'Красноярск', icon: '🏔️' },
+      'sochi': { name: 'Сочи', icon: '🌴' }
+    };
+
+    const positions = {
+      'bp': { name: 'БП' },
+      'bp_bs': { name: 'БП BS' },
+      'sbe': { name: 'СБЭ' },
+      'ipb': { name: 'ИПБ' }
+    };
+
+    const department = departments[user.weekendOrder.department];
+    const position = positions[user.weekendOrder.position];
+
+    const selectedDatesText = user.weekendOrder.selectedDates.map(date => {
+      const d = new Date(date);
+      return d.toLocaleDateString('ru-RU', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        weekday: 'long'
+      });
+    }).join('\n• ');
+
+    return {
+      type: 'weekend_confirmation',
+      data: {
+        message: '✨ Пожалуйста, проверьте вашу заявку на выходные:',
+        summary: {
+          department: `${department.icon} ${department.name}`,
+          position: position.name,
+          dates: selectedDatesText,
+          count: user.weekendOrder.selectedDates.length
+        },
+        buttons: [
+          { text: '✅ Отправить заявку', command: '/weekend_submit', style: 'confirm' },
+          { text: '✏️ Изменить', command: '/weekend_book', style: 'edit' }
+        ]
+      }
+    };
+  }
+
+  async handleWeekendSubmit(userId, args) {
+    const user = this.getOrCreateUser(userId);
+    
+    try {
+      // Создаем заказ выходных
+      const orderId = this.generateOrderId();
+      const order = {
+        id: orderId,
+        user_id: userId,
+        full_name: user.fullName || `Пользователь ${userId}`,
+        employee_id: user.employeeId || '000000',
+        type: 'weekend',
+        department: user.weekendOrder.department,
+        position: user.weekendOrder.position,
+        selectedDates: user.weekendOrder.selectedDates,
+        status: 'pending',
+        created_at: new Date(),
+        updated_at: new Date()
+      };
+
+      // Сохраняем заказ в базу данных
+      await this.database.saveOrder(order);
+
+      // Сбрасываем состояние пользователя
+      user.state = 'idle';
+      user.weekendOrder = {};
+
+      this.logger.info('Заказ выходных успешно сохранен в базу данных', { orderId, userId });
+
+      const departments = {
+        'moscow': { name: 'Москва', icon: '🏛️' },
+        'spb': { name: 'Санкт-Петербург', icon: '🏛️' },
+        'krasnoyarsk': { name: 'Красноярск', icon: '🏔️' },
+        'sochi': { name: 'Сочи', icon: '🌴' }
+      };
+
+      const positions = {
+        'bp': { name: 'БП' },
+        'bp_bs': { name: 'БП BS' },
+        'sbe': { name: 'СБЭ' },
+        'ipb': { name: 'ИПБ' }
+      };
+
+      const department = departments[order.department];
+      const position = positions[order.position];
+
+      const selectedDatesText = order.selectedDates.map(date => {
+        const d = new Date(date);
+        return d.toLocaleDateString('ru-RU', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+          weekday: 'long'
+        });
+      }).join('\n• ');
+
+      return {
+        type: 'weekend_submitted',
+        data: {
+          message: `🎉 Заявка на выходные успешно отправлена!\n\n📋 Детали заказа:\n• ID: ${orderId}\n• Подразделение: ${department.icon} ${department.name}\n• Должность: ${position.name}\n• Даты: ${selectedDatesText}\n• Статус: Ожидает подтверждения\n\n⏰ Время обработки: до 24 часов\n📞 Мы свяжемся с вами для подтверждения.`,
+          orderId: orderId,
+          buttons: [
+            { text: '📝 Мои заказы', command: '/weekend_booked_dates' },
+            { text: '📅 Заказать еще', command: '/weekend_book' },
+            { text: '🏠 Главное меню', command: '/start' }
+          ]
+        }
+      };
+    } catch (error) {
+      this.logger.error('Ошибка сохранения заказа выходных в базу данных', { error: error.message, userId });
+      
+      return {
+        type: 'error',
+        data: {
+          message: '❌ Произошла ошибка при сохранении заказа. Попробуйте еще раз.',
+          buttons: [
+            { text: 'Попробовать снова', command: '/weekend_submit' },
+            { text: 'Начать заново', command: '/weekend_book' }
+          ]
+        }
+      };
+    }
+  }
+
+  // Обработчики навигации по календарю
+  handleWeekendContinueSelection(userId, args) {
+    const user = this.getOrCreateUser(userId);
+    user.state = 'weekend_date_selection';
+
+    const departments = {
+      'moscow': { name: 'Москва', icon: '🏛️' },
+      'spb': { name: 'Санкт-Петербург', icon: '🏛️' },
+      'krasnoyarsk': { name: 'Красноярск', icon: '🏔️' },
+      'sochi': { name: 'Сочи', icon: '🌴' }
+    };
+
+    const positions = {
+      'bp': { name: 'БП' },
+      'bp_bs': { name: 'БП BS' },
+      'sbe': { name: 'СБЭ' },
+      'ipb': { name: 'ИПБ' }
+    };
+
+    const department = departments[user.weekendOrder.department];
+    const position = positions[user.weekendOrder.position];
+
+    const selectedDatesText = user.weekendOrder.selectedDates ? 
+      user.weekendOrder.selectedDates.map(date => {
+        const d = new Date(date);
+        return d.toLocaleDateString('ru-RU', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+          weekday: 'long'
+        });
+      }).join(', ') : '';
+
+    return {
+      type: 'weekend_date_selection',
+      data: {
+        message: `✅ Продолжаем выбор дат`,
+        description: `Подразделение: ${department.icon} ${department.name}\nДолжность: ${position.name}\n${selectedDatesText ? `Выбранные даты: ${selectedDatesText}\n` : ''}\nВыберите даты для выходных (можно выбрать 1 или 2 даты):`,
+        calendar: this.generateWeekendCalendar(new Date()),
+        selectedDates: user.weekendOrder.selectedDates || [],
+        buttons: [
+          { text: '⬅️ Назад к выбору должности', command: '/weekend_book' }
+        ]
+      }
+    };
+  }
+
+  handleWeekendPrevMonth(userId, args) {
+    const user = this.getOrCreateUser(userId);
+    const month = parseInt(args[0]) || 0;
+    const year = parseInt(args[1]) || new Date().getFullYear();
+    
+    const targetDate = new Date(year, month, 1);
+    user.state = 'weekend_date_selection';
+
+    const departments = {
+      'moscow': { name: 'Москва', icon: '🏛️' },
+      'spb': { name: 'Санкт-Петербург', icon: '🏛️' },
+      'krasnoyarsk': { name: 'Красноярск', icon: '🏔️' },
+      'sochi': { name: 'Сочи', icon: '🌴' }
+    };
+
+    const positions = {
+      'bp': { name: 'БП' },
+      'bp_bs': { name: 'БП BS' },
+      'sbe': { name: 'СБЭ' },
+      'ipb': { name: 'ИПБ' }
+    };
+
+    const department = departments[user.weekendOrder.department];
+    const position = positions[user.weekendOrder.position];
+
+    const selectedDatesText = user.weekendOrder.selectedDates ? 
+      user.weekendOrder.selectedDates.map(date => {
+        const d = new Date(date);
+        return d.toLocaleDateString('ru-RU', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+          weekday: 'long'
+        });
+      }).join(', ') : '';
+
+    return {
+      type: 'weekend_date_selection',
+      data: {
+        message: `✅ Выбор дат`,
+        description: `Подразделение: ${department.icon} ${department.name}\nДолжность: ${position.name}\n${selectedDatesText ? `Выбранные даты: ${selectedDatesText}\n` : ''}\nВыберите даты для выходных (можно выбрать 1 или 2 даты):`,
+        calendar: this.generateWeekendCalendar(targetDate),
+        selectedDates: user.weekendOrder.selectedDates || [],
+        buttons: [
+          { text: '⬅️ Назад к выбору должности', command: '/weekend_book' }
+        ]
+      }
+    };
+  }
+
+  handleWeekendNextMonth(userId, args) {
+    const user = this.getOrCreateUser(userId);
+    const month = parseInt(args[0]) || 0;
+    const year = parseInt(args[1]) || new Date().getFullYear();
+    
+    const targetDate = new Date(year, month, 1);
+    user.state = 'weekend_date_selection';
+
+    const departments = {
+      'moscow': { name: 'Москва', icon: '🏛️' },
+      'spb': { name: 'Санкт-Петербург', icon: '🏛️' },
+      'krasnoyarsk': { name: 'Красноярск', icon: '🏔️' },
+      'sochi': { name: 'Сочи', icon: '🌴' }
+    };
+
+    const positions = {
+      'bp': { name: 'БП' },
+      'bp_bs': { name: 'БП BS' },
+      'sbe': { name: 'СБЭ' },
+      'ipb': { name: 'ИПБ' }
+    };
+
+    const department = departments[user.weekendOrder.department];
+    const position = positions[user.weekendOrder.position];
+
+    const selectedDatesText = user.weekendOrder.selectedDates ? 
+      user.weekendOrder.selectedDates.map(date => {
+        const d = new Date(date);
+        return d.toLocaleDateString('ru-RU', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+          weekday: 'long'
+        });
+      }).join(', ') : '';
+
+    return {
+      type: 'weekend_date_selection',
+      data: {
+        message: `✅ Выбор дат`,
+        description: `Подразделение: ${department.icon} ${department.name}\nДолжность: ${position.name}\n${selectedDatesText ? `Выбранные даты: ${selectedDatesText}\n` : ''}\nВыберите даты для выходных (можно выбрать 1 или 2 даты):`,
+        calendar: this.generateWeekendCalendar(targetDate),
+        selectedDates: user.weekendOrder.selectedDates || [],
+        buttons: [
+          { text: '⬅️ Назад к выбору должности', command: '/weekend_book' }
+        ]
+      }
+    };
   }
 }
 
