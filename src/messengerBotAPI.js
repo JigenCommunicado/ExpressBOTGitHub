@@ -414,7 +414,7 @@ class MessengerBotAPI {
   async getQuotaStats(req, res) {
     try {
       const { location } = req.query;
-      const stats = this.bot.quotaManager.getQuotaStats(location);
+      const stats = this.bot.weekendQuotaManager.getQuotaStats(location);
       
       res.json({
         success: true,
@@ -441,7 +441,7 @@ class MessengerBotAPI {
         });
       }
 
-      const result = this.bot.quotaManager.updateQuota(location, position, parseInt(quota));
+      const result = this.bot.weekendQuotaManager.updateQuota(location, position, parseInt(quota));
       
       res.json({
         success: true,
@@ -460,7 +460,7 @@ class MessengerBotAPI {
   // Сбросить квоты
   async resetQuotas(req, res) {
     try {
-      const result = this.bot.quotaManager.resetQuotas();
+      const result = this.bot.weekendQuotaManager.resetQuotas();
       
       res.json({
         success: true,

@@ -1,128 +1,68 @@
 {
   "Москва": {
-    "BP": 0,
-    "BP BS": 0,
-    "SBE": 0,
-    "IPB": 0,
+    "BP": 5,
+    "BP BS": 3,
+    "SBE": 2,
+    "IPB": 1,
     "dates": {
+      "2025-09-25": {
+        "BP": {
+          "total": 5,
+          "used": 0,
+          "available": 5
+        },
+        "SBE": {
+          "total": 2,
+          "used": 1,
+          "available": 1
+        }
+      },
       "2025-09-26": {
+        "BP": {
+          "total": 5,
+          "used": 1,
+          "available": 4
+        },
         "SBE": {
           "total": 2,
           "used": 0,
           "available": 2
-        },
-        "BP BS": {
-          "total": 20,
-          "used": 0,
-          "available": 20
         }
       },
       "2025-09-27": {
+        "BP": {
+          "total": 5,
+          "used": 0,
+          "available": 5
+        },
         "SBE": {
           "total": 2,
           "used": 0,
           "available": 2
-        },
-        "BP BS": {
-          "total": 20,
-          "used": 0,
-          "available": 20
         }
       },
-      "2025-10-03": {
+      "2025-09-28": {
+        "BP": {
+          "total": 5,
+          "used": 0,
+          "available": 5
+        },
         "SBE": {
           "total": 2,
           "used": 0,
           "available": 2
-        },
-        "BP BS": {
-          "total": 20,
-          "used": 0,
-          "available": 20
         }
       },
-      "2025-10-04": {
+      "2025-09-29": {
+        "BP": {
+          "total": 5,
+          "used": 0,
+          "available": 5
+        },
         "SBE": {
           "total": 2,
           "used": 0,
           "available": 2
-        },
-        "BP BS": {
-          "total": 20,
-          "used": 0,
-          "available": 20
-        }
-      },
-      "2025-10-10": {
-        "SBE": {
-          "total": 2,
-          "used": 0,
-          "available": 2
-        },
-        "BP BS": {
-          "total": 20,
-          "used": 0,
-          "available": 20
-        }
-      },
-      "2025-10-11": {
-        "SBE": {
-          "total": 2,
-          "used": 0,
-          "available": 2
-        },
-        "BP BS": {
-          "total": 20,
-          "used": 0,
-          "available": 20
-        }
-      },
-      "2025-10-17": {
-        "SBE": {
-          "total": 2,
-          "used": 0,
-          "available": 2
-        },
-        "BP BS": {
-          "total": 20,
-          "used": 0,
-          "available": 20
-        }
-      },
-      "2025-10-18": {
-        "SBE": {
-          "total": 2,
-          "used": 0,
-          "available": 2
-        },
-        "BP BS": {
-          "total": 20,
-          "used": 0,
-          "available": 20
-        }
-      },
-      "2025-10-24": {
-        "SBE": {
-          "total": 2,
-          "used": 0,
-          "available": 2
-        },
-        "BP BS": {
-          "total": 20,
-          "used": 0,
-          "available": 20
-        }
-      },
-      "2025-10-25": {
-        "SBE": {
-          "total": 2,
-          "used": 0,
-          "available": 2
-        },
-        "BP BS": {
-          "total": 20,
-          "used": 0,
-          "available": 20
         }
       }
     }

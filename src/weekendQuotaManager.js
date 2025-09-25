@@ -70,7 +70,10 @@ class WeekendQuotaManager {
   getQuotaForDate(date, location, position) {
     const dateStr = this.formatDate(date);
     
+    console.log('getQuotaForDate called:', { date: dateStr, location, position, quotas: this.quotas[location] });
+    
     if (!this.quotas[location] || !this.quotas[location][position]) {
+      console.log('No quota found for:', { location, position });
       return 0;
     }
 

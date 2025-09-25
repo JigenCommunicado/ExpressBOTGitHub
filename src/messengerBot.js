@@ -7,7 +7,7 @@ class MessengerBot {
     this.users = new Map();
     this.flightRequests = new Map();
     this.database = new DatabaseManager();
-    this.quotaManager = new WeekendQuotaManager();
+    this.weekendQuotaManager = new WeekendQuotaManager();
     
     // Общие объекты для маппинга
     this.departments = {
@@ -515,6 +515,15 @@ class MessengerBot {
 
     if (user.state === 'entering_wishes') {
       return this.handleWishesInput(userId, message);
+    }
+
+    if (user.state === 'weekend_fullname_input') {
+      this.logger.info('Processing weekend fullname input', { userId, message, state: user.state });
+      return this.handleWeekendFullnameInput(userId, [message]);
+    }
+
+    if (user.state === 'weekend_employee_id_input') {
+      return this.handleWeekendEmployeeIdInput(userId, [message]);
     }
 
     // Проверяем, не является ли сообщение выбором локации
@@ -1599,7 +1608,27 @@ class MessengerBot {
       let available = !isPast;
       
       if (location && position && !isPast) {
-        const quota = this.weekendQuotaManager.getQuotaForDate(dayDate, location, position);
+        const locationName = this.departmentsMapping[location] || location;
+        const positionName = this.positionsMapping[position] || position;
+        this.logger.info('Before getQuotaForDate', { 
+          date: dayDate.toISOString().split('T')[0], 
+          location, 
+          locationName,
+          position, 
+          positionName,
+          departmentsMapping: this.departmentsMapping,
+          positionsMapping: this.positionsMapping
+        });
+        const quota = this.weekendQuotaManager.getQuotaForDate(dayDate, locationName, positionName);
+        this.logger.info('After getQuotaForDate', { 
+          date: dayDate.toISOString().split('T')[0], 
+          location, 
+          locationName,
+          position, 
+          positionName,
+          quota: quota,
+          available: quota.available 
+        });
         available = quota.available > 0;
       }
       
@@ -1938,8 +1967,8 @@ class MessengerBot {
       const order = {
         id: orderId,
         user_id: userId,
-        full_name: user.fullName || `Пользователь ${userId}`,
-        employee_id: user.employeeId || '000000',
+        full_name: user.weekendOrder.fullName || `Пользователь ${userId}`,
+        employee_id: user.weekendOrder.employeeId || '000000',
         type: 'weekend',
         department: user.weekendOrder.department,
         position: user.weekendOrder.position,
@@ -1953,13 +1982,13 @@ class MessengerBot {
       // Бронируем даты в системе квот
       for (const dateStr of user.weekendOrder.selectedDates) {
         const date = new Date(dateStr);
-        const bookingResult = this.quotaManager.bookDate(date, location, position);
+        const bookingResult = this.weekendQuotaManager.bookDate(date, location, position);
         if (!bookingResult.success) {
           // Если не удалось забронировать, отменяем предыдущие бронирования
           for (const prevDateStr of user.weekendOrder.selectedDates) {
             if (prevDateStr !== dateStr) {
               const prevDate = new Date(prevDateStr);
-              this.quotaManager.cancelBooking(prevDate, location, position);
+              this.weekendQuotaManager.cancelBooking(prevDate, location, position);
             }
           }
           throw new Error(bookingResult.message);
@@ -2058,7 +2087,7 @@ class MessengerBot {
       data: {
         message: `✅ Продолжаем выбор дат`,
         description: `Подразделение: ${department.icon} ${department.name}\nДолжность: ${positionInfo.name}\n${selectedDatesText ? `Выбранные даты: ${selectedDatesText}\n` : ''}\nВыберите даты для выходных (можно выбрать 1 или 2 даты):`,
-        calendar: this.generateWeekendCalendar(new Date(), this.departmentsMapping[user.weekendOrder.department], this.positionsMapping[user.weekendOrder.position]),
+        calendar: this.generateWeekendCalendar(new Date(), user.weekendOrder.department, user.weekendOrder.position),
         selectedDates: user.weekendOrder.selectedDates || [],
         buttons: [
           { text: '⬅️ Назад к выбору должности', command: '/weekend_book' }
@@ -2098,7 +2127,7 @@ class MessengerBot {
       data: {
         message: `✅ Выбор дат`,
         description: `Подразделение: ${department.icon} ${department.name}\nДолжность: ${positionInfo.name}\n${selectedDatesText ? `Выбранные даты: ${selectedDatesText}\n` : ''}\nВыберите даты для выходных (можно выбрать 1 или 2 даты):`,
-        calendar: this.generateWeekendCalendar(targetDate, this.departmentsMapping[user.weekendOrder.department], this.positionsMapping[user.weekendOrder.position]),
+        calendar: this.generateWeekendCalendar(targetDate, user.weekendOrder.department, user.weekendOrder.position),
         selectedDates: user.weekendOrder.selectedDates || [],
         buttons: [
           { text: '⬅️ Назад к выбору должности', command: '/weekend_book' }
@@ -2138,7 +2167,7 @@ class MessengerBot {
       data: {
         message: `✅ Выбор дат`,
         description: `Подразделение: ${department.icon} ${department.name}\nДолжность: ${positionInfo.name}\n${selectedDatesText ? `Выбранные даты: ${selectedDatesText}\n` : ''}\nВыберите даты для выходных (можно выбрать 1 или 2 даты):`,
-        calendar: this.generateWeekendCalendar(targetDate, this.departmentsMapping[user.weekendOrder.department], this.positionsMapping[user.weekendOrder.position]),
+        calendar: this.generateWeekendCalendar(targetDate, user.weekendOrder.department, user.weekendOrder.position),
         selectedDates: user.weekendOrder.selectedDates || [],
         buttons: [
           { text: '⬅️ Назад к выбору должности', command: '/weekend_book' }
@@ -2234,6 +2263,7 @@ class MessengerBot {
 
   // Обработчик ввода табельного номера для заказа выходных
   handleWeekendEmployeeIdInput(userId, args) {
+    this.logger.info('Processing weekend employee ID input', { userId, args, weekendQuotaManager: !!this.weekendQuotaManager });
     const user = this.getOrCreateUser(userId);
     const employeeId = args[0].trim();
     
@@ -2264,7 +2294,7 @@ class MessengerBot {
       data: {
         message: `✅ Данные заполнены!`,
         description: `Подразделение: ${department.icon} ${department.name}\nДолжность: ${position.name}\nФИО: ${user.weekendOrder.fullName}\nТабельный номер: ${employeeId}\n\nВыберите даты для выходных (можно выбрать 1 или 2 даты):`,
-        calendar: this.generateWeekendCalendar(new Date(), this.departmentsMapping[user.weekendOrder.department], this.positionsMapping[user.weekendOrder.position]),
+        calendar: this.generateWeekendCalendar(new Date(), user.weekendOrder.department, user.weekendOrder.position),
         selectedDates: user.weekendOrder.selectedDates || [],
         buttons: [
           { text: '⬅️ Изменить данные', command: '/weekend_book' }

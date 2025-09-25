@@ -3,7 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Админ-панель ExpressBOT</title>
+    <title>CrewLife - Административная панель</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
     <style>
         * {
             margin: 0;
@@ -12,10 +18,11 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Montserrat', sans-serif;
+            background: linear-gradient(135deg, #FFFFFF 0%, #F8F9FA 100%);
             min-height: 100vh;
-            color: #333;
+            color: #333333;
+            line-height: 1.6;
         }
 
         .container {
@@ -25,21 +32,27 @@
         }
 
         .header {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 15px;
-            padding: 20px;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
             margin-bottom: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            border: 1px solid #F0F0F0;
+            text-align: center;
         }
 
         .header h1 {
-            color: #4a5568;
+            color: #333333;
             margin-bottom: 10px;
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
         }
 
         .header p {
-            color: #718096;
+            color: #666666;
+            font-size: 1rem;
+            font-weight: 400;
         }
 
         .login-form {
@@ -205,8 +218,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🤖 Админ-панель ExpressBOT</h1>
-            <p>Управление смарт-приложением и пользователями</p>
+            <h1>✈️ CrewLife - Административная панель</h1>
+            <p>Управление системой заявок экипажа</p>
         </div>
 
         <!-- Форма входа -->
